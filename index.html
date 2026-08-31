@@ -27,7 +27,8 @@
   .hint{ font-size:13px; color:#9aa6d8; text-align:center; line-height:1.8; max-width:560px; }
   kbd{ background:#1b2350; border:1px solid #3a4790; border-bottom-width:2px;
        border-radius:4px; padding:1px 6px; font-size:12px; color:#dfe6ff; }
-  .controls{ width:200px; }
+  .controls{ width:200px; display:none; }        /* 通常は非表示。傾き操作が使えない時だけJSで表示 */
+  .controls.fallback{ display:block; }
   #pad{ display:grid; grid-template-columns:repeat(3,60px); grid-template-rows:repeat(3,60px); gap:6px; }
   #pad button, #fire{
     background:#161e48; color:#e8ecff; border:1px solid #38468f; border-radius:12px;
@@ -37,15 +38,17 @@
   #pad button:active, #fire:active{ background:#2b3a8f; }
   #pad span{ visibility:hidden; }
   #fire{ width:100%; margin-top:8px; padding:14px; font-size:16px; letter-spacing:3px; color:#8ffcff; }
-  @media (min-width:760px){ .controls{ display:none; } }
+  #hintTouch{ display:none; }
+  @media (min-width:760px){ .controls{ display:none !important; } }
 </style>
 </head>
 <body>
 <h1>AETHER&nbsp;WARDEN</h1>
 <canvas id="game"></canvas>
 <div class="hint">
-  移動: <kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&larr;</kbd><kbd>&rarr;</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ／
-  上方向ショット: <kbd>Space</kbd> ／ リスタート: <kbd>R</kbd> ／ ポーズ: <kbd>P</kbd><br>
+  <span id="hintPC">移動: <kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&larr;</kbd><kbd>&rarr;</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ／
+  上方向ショット: <kbd>Space</kbd> ／ リスタート: <kbd>R</kbd> ／ ポーズ: <kbd>P</kbd></span>
+  <span id="hintTouch"><b style="color:#8ffcff">本体を傾けて移動</b>（縦持ち推奨） ／ <b style="color:#8ffcff">画面をスワイプでミサイル発射</b></span><br>
   グリッドの<b style="color:#f0c98a">モート</b>を回収しつつ、上空からウェーブで降下する<b style="color:#ff6a7a">ハスク</b>を迎撃せよ。<br>
   四隅の<b style="color:#ff8adf">プリズム</b>を取ると10秒間だけ攻撃が3方向の<b style="color:#8ffcff">トライショット</b>に強化！
 </div>
@@ -276,6 +279,7 @@ function update(){
   }
 
   /* --- プレイヤー --- */
+  applyTilt();
   stepPlayer(player);
   if(player.dir.x || player.dir.y) player.facing = {x:player.dir.x, y:player.dir.y};
 
@@ -416,10 +420,12 @@ function draw(){
     ctx.globalAlpha = 1;
   }
 
-  if(state === 'start')         overlay('AETHER WARDEN', 'モートを回収し、降下するハスクを迎撃せよ！', '何かキーを押す / タップでスタート');
+  if(state === 'start')         overlay('AETHER WARDEN', 'モートを回収し、降下するハスクを迎撃せよ！',
+                                        isTouch ? 'タップでスタート（傾けて移動・スワイプで発射）' : '何かキーを押してスタート');
   else if(state === 'paused')   overlay('PAUSED', '', 'P で再開');
-  else if(state === 'gameover') overlay('SIGNAL LOST', 'ウェーブ ' + Math.max(1,wave) + ' / スコア ' + score, 'R でリスタート');
-  else if(state === 'win')      overlay('GRID CLEARED', 'スコア ' + score, 'R でもう一度');
+  else if(state === 'gameover') overlay('SIGNAL LOST', 'ウェーブ ' + Math.max(1,wave) + ' / スコア ' + score,
+                                        isTouch ? 'タップでリスタート' : 'R でリスタート');
+  else if(state === 'win')      overlay('GRID CLEARED', 'スコア ' + score, isTouch ? 'タップでもう一度' : 'R でもう一度');
 }
 
 function drawPlayer(){
@@ -531,6 +537,16 @@ function overlay(title, sub, foot){
 }
 
 /* ===== 入力 ===== */
+const isTouch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
+
+function beginPlay(){                 // スタート / リスタート共通
+  if(!actx){ try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){} }
+  init();
+  tiltBase = null;                    // 現在の持ち方を「中立」として再キャリブレーション
+  enableTilt();
+}
+
+/* --- キーボード (PC) --- */
 const KEYMAP = {
   ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0],
   KeyW:[0,-1],    KeyS:[0,1],      KeyA:[-1,0],       KeyD:[1,0],
@@ -538,12 +554,11 @@ const KEYMAP = {
 
 addEventListener('keydown', ev => {
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(ev.code)) ev.preventDefault();
-  if(!actx){ try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){} }
 
-  if(state === 'start'){ init(); return; }
-  if(state === 'gameover' || state === 'win'){ if(ev.code === 'KeyR') init(); return; }
+  if(state === 'start'){ beginPlay(); return; }
+  if(state === 'gameover' || state === 'win'){ if(ev.code === 'KeyR') beginPlay(); return; }
   if(ev.code === 'KeyP'){ state = state === 'paused' ? 'playing' : 'paused'; return; }
-  if(ev.code === 'KeyR'){ init(); return; }
+  if(ev.code === 'KeyR'){ beginPlay(); return; }
   if(state !== 'playing') return;
 
   if(ev.code === 'Space'){ keys[' '] = true; tryFire(); return; }
@@ -552,24 +567,95 @@ addEventListener('keydown', ev => {
 });
 addEventListener('keyup', ev => { if(ev.code === 'Space') keys[' '] = false; });
 
-canvas.addEventListener('mousedown', () => { if(state === 'start') init(); });
+canvas.addEventListener('mousedown', () => { if(!isTouch && state === 'start') beginPlay(); });
 
+/* --- スマホ: 端末の傾きで移動 --- */
+let tiltOn = false;      // 傾きイベントを実際に受信できたか
+let tiltAsked = false;
+let tiltBase = null;     // 中立のbeta角
+let tiltG = 0, tiltB = 0;
+
+function onOrient(e){
+  if(e.gamma == null || e.beta == null) return;
+  tiltOn = true;
+  tiltG = e.gamma;
+  tiltB = e.beta;
+  if(tiltBase == null) tiltBase = e.beta;
+}
+function showPad(){ document.querySelector('.controls').classList.add('fallback'); }
+
+function enableTilt(){
+  if(!isTouch || tiltAsked) return;
+  tiltAsked = true;
+  const attach = ok => {
+    if(!ok){ showPad(); return; }
+    addEventListener('deviceorientation', onOrient);
+    setTimeout(() => { if(!tiltOn) showPad(); }, 1500);   // 傾きが取れない端末はボタンにフォールバック
+  };
+  try{
+    if(typeof DeviceOrientationEvent !== 'undefined' &&
+       typeof DeviceOrientationEvent.requestPermission === 'function'){
+      DeviceOrientationEvent.requestPermission().then(r => attach(r === 'granted')).catch(() => attach(false));
+    } else {
+      attach(true);
+    }
+  }catch(e){ attach(false); }
+}
+
+function applyTilt(){
+  if(!tiltOn || state !== 'playing') return;
+  const gx = tiltG;                                   // 左右の傾き
+  const gy = tiltB - (tiltBase == null ? tiltB : tiltBase);   // 前後の傾き(中立からの差)
+  const DEAD = 7;
+  let dx = 0, dy = 0;
+  if(Math.abs(gx) >= Math.abs(gy)){
+    if(gx >  DEAD) dx =  1; else if(gx < -DEAD) dx = -1;
+  } else {
+    if(gy >  DEAD) dy =  1; else if(gy < -DEAD) dy = -1;
+  }
+  if(dx || dy) player.desired = { x:dx, y:dy };       // 水平付近では直前の向きを維持
+}
+
+/* --- スマホ: 画面スワイプでミサイル発射 --- */
+let sw = null;
+canvas.addEventListener('touchstart', e => {
+  if(state === 'start'){ beginPlay(); return; }
+  if(state === 'gameover' || state === 'win'){ beginPlay(); return; }
+  const t = e.changedTouches[0];
+  sw = { x:t.clientX, y:t.clientY };
+}, { passive:true });
+canvas.addEventListener('touchmove', e => {
+  if(!sw || state !== 'playing') return;
+  const t = e.changedTouches[0];
+  if(Math.hypot(t.clientX - sw.x, t.clientY - sw.y) > 20){
+    tryFire();                                        // 連続スワイプで連射(クールダウン制限あり)
+    sw.x = t.clientX; sw.y = t.clientY;
+  }
+}, { passive:true });
+canvas.addEventListener('touchend', () => { sw = null; }, { passive:true });
+
+/* --- フォールバックの十字ボタン + FIRE --- */
 document.querySelectorAll('#pad button').forEach(btn => {
   const m = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] }[btn.dataset.dir];
   const go = e => {
     e.preventDefault();
-    if(state === 'start'){ init(); return; }
+    if(state === 'start'){ beginPlay(); return; }
     if(state === 'playing') player.desired = { x:m[0], y:m[1] };
   };
   btn.addEventListener('touchstart', go, { passive:false });
   btn.addEventListener('mousedown', go);
 });
 const fireBtn = document.getElementById('fire');
-const fireDown = e => { e.preventDefault(); if(state === 'start'){ init(); return; } keys[' '] = true; tryFire(); };
+const fireDown = e => { e.preventDefault(); if(state === 'start'){ beginPlay(); return; } keys[' '] = true; tryFire(); };
 fireBtn.addEventListener('touchstart', fireDown, { passive:false });
 fireBtn.addEventListener('touchend', e => { e.preventDefault(); keys[' '] = false; }, { passive:false });
 fireBtn.addEventListener('mousedown', fireDown);
 addEventListener('mouseup', () => { keys[' '] = false; });
+
+if(isTouch){
+  document.getElementById('hintPC').style.display = 'none';
+  document.getElementById('hintTouch').style.display = 'inline';
+}
 
 /* ===== 起動 ===== */
 init();
