@@ -87,8 +87,18 @@
   }
   .card .play::after { content: " \25B6"; color: var(--card-accent, var(--accent)); }
 
+  /* ad area — invisible until an ad actually fills, so it never looks broken */
+  .ad-slot { width: 100%; max-width: 760px; margin: 40px auto 0; text-align: center; }
+  .ad-slot .ad-label {
+    display: none;
+    font-size: 10px; letter-spacing: 0.24em; color: var(--muted); margin-bottom: 8px;
+  }
+  .ad-slot ins { display: block; }
+  .ad-slot ins[data-ad-status="unfilled"] { display: none !important; }
+  .ad-slot:has(ins[data-ad-status="filled"]) .ad-label { display: block; }
+
   footer {
-    margin-top: 56px; color: var(--muted);
+    margin-top: 44px; color: var(--muted);
     font-size: 11px; letter-spacing: 0.1em; text-align: center;
   }
 </style>
@@ -114,6 +124,24 @@
       <span class="play">PLAY</span>
     </a>
   </main>
+
+  <!--
+    Google AdSense display unit for the menu page.
+    Until the site is approved this stays invisible (see .ad-slot CSS).
+    To activate a MANUAL unit: create a "Display ad" in AdSense and replace
+    the data-ad-slot value below with the 10-digit slot ID it gives you.
+    (Auto ads work without this, straight from the loader in <head>.)
+  -->
+  <aside class="ad-slot">
+    <div class="ad-label">SPONSORED</div>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-8860612143084575"
+         data-ad-slot="0000000000"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+  </aside>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
   <footer>HAMZWORKERZ &middot; hosted on GitHub Pages</footer>
 </body>
