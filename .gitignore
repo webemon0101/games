@@ -1,2 +1,3 @@
-# このリポジトリでは index.html（ゲーム）だけを公開する
+# 公開サイト（GitHub Pages）はルートの index.html とゲーム各フォルダ。
+# 練習用スクリプトなど非公開のものは無視する。
 calculator.py
