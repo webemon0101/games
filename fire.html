@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2b7fc4">
+<title>FIRE RESCUE — LCD GAME</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(circle at 50% 30%, #2b3d47, #131c22 70%);
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100dvh; padding: 10px;
+    font-family: "Courier New", ui-monospace, monospace;
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+    overflow: hidden;
+  }
+
+  /* ---- Retro plastic housing ---- */
+  .console {
+    position: relative;
+    width: min(94vw, 74vh, 560px);
+    background: linear-gradient(#5aa9e6, #2b7fc4 55%, #17537f);
+    border-radius: 28px / 24px;
+    padding: 48px 20px 20px;
+    box-shadow:
+      inset 0 3px 5px rgba(255,255,255,.4),
+      inset 0 -10px 20px rgba(0,0,0,.35),
+      0 22px 45px rgba(0,0,0,.5);
+  }
+  .brand {
+    position: absolute; top: 15px; left: 0; right: 0;
+    text-align: center; color: #eaf4ff;
+    font: 700 13px/1 "Courier New", monospace; letter-spacing: 3px;
+    text-shadow: 0 1px 0 rgba(0,0,0,.35);
+  }
+  .brand small { display:block; font-size:9px; letter-spacing:2px; opacity:.75; margin-top:3px; }
+
+  .muteBtn {
+    position: absolute; top: 12px; right: 16px;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: none; cursor: pointer;
+    background: linear-gradient(#2c3e50, #1a2530);
+    color: #fff; font-size: 18px; line-height: 40px;
+    box-shadow: 0 3px 0 #0d141c, inset 0 1px 2px rgba(255,255,255,.2);
+  }
+  .muteBtn:active { transform: translateY(2px); box-shadow: 0 1px 0 #0d141c; }
+
+  /* ---- LCD screen ---- */
+  .screen {
+    background: #3b4034;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 3px #21241d, inset 0 5px 16px rgba(0,0,0,.65);
+  }
+  canvas {
+    width: 100%; height: auto; display: block;
+    border-radius: 6px;
+    background: #9aa77f;
+  }
+
+  /* ---- Touch controls ---- */
+  .controls { display: flex; gap: 14px; margin-top: 16px; }
+  .controls button {
+    flex: 1; height: 70px;
+    border: none; border-radius: 16px; cursor: pointer;
+    font-size: 32px; color: #fff;
+    background: linear-gradient(#33475a, #1a2530);
+    box-shadow: 0 6px 0 #0c1219, inset 0 2px 3px rgba(255,255,255,.18);
+    touch-action: manipulation; user-select: none;
+  }
+  .controls button:active { transform: translateY(4px); box-shadow: 0 2px 0 #0c1219; }
+
+  .hint {
+    margin-top: 12px; text-align: center;
+    color: #eaf4ff; font: 700 11px/1.5 "Courier New", monospace;
+    letter-spacing: 1px; opacity: .85;
+  }
+
+  @media (orientation: landscape) and (max-height: 560px) {
+    .console { width: min(70vh, 94vw, 520px); padding-top: 36px; }
+    .controls button { height: 54px; font-size: 26px; }
+    .brand { font-size: 11px; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="console">
+    <div class="brand">LCD GAME<small>FIRE RESCUE</small></div>
+    <button class="muteBtn" id="muteBtn" aria-label="mute">&#128266;</button>
+
+    <div class="screen">
+      <canvas id="game" width="640" height="420"></canvas>
+    </div>
+
+    <div class="controls">
+      <button id="leftBtn" aria-label="left">&#9664;</button>
+      <button id="rightBtn" aria-label="right">&#9654;</button>
+    </div>
+
+    <div class="hint">画面タップ / 矢印キー / A・D でも移動できます</div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------------------------------------------------------------------------
+  //  Setup
+  // ---------------------------------------------------------------------------
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = 640, H = 420;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+
+  const LCD_BG = "#9aa77f";
+  const INK    = "#1f221a";
+  const GHOST  = "rgba(31,34,26,0.13)";
+
+  // Fixed geometry
+  const GROUND = 364;
+
+  // Silver-series FIRE: every jumper leaves the SAME diving board and travels one
+  // single fixed route in 8 equally-timed steps, driven by the metronome beat:
+  //   0 board  1 air  2 LEFT net  3 apex  4 MID net  5 apex  6 RIGHT net  7 ambulance
+  // Catch checks happen at steps 2 / 4 / 6.  Only STEP.x matters for the path;
+  // STEP.y is just a hint — the real curve comes from pathY() below.
+  const STEPS = [
+    { x: 134, y: 175 },  // 0  poised on the diving board
+    { x: 170, y: 246 },  // 1  mid-dive
+    { x: 206, y: 338 },  // 2  LEFT net   -> need medics at pos 0
+    { x: 264, y: 190 },  // 3  apex
+    { x: 322, y: 338 },  // 4  MID net    -> need medics at pos 1
+    { x: 382, y: 178 },  // 5  apex
+    { x: 438, y: 338 },  // 6  RIGHT net  -> need medics at pos 2
+    { x: 548, y: 340 },  // 7  ambulance  -> rescued, +1
+  ];
+  const P = [ STEPS[2], STEPS[4], STEPS[6] ];   // the three net positions
+  const SPAWN = STEPS[0];
+  const NET_STEP = { 2: 0, 4: 1, 6: 2 };        // step -> required stretcher slot
+
+  // Continuous trajectory as a function of s = (step - 1 + t), s in [0..7].
+  // Each "flight" is a single parabola, so velocity is continuous everywhere
+  // except at the nets (where a bounce is meant to reverse it) — no stray kinks.
+  function pathX(s) {
+    s = Math.max(0, Math.min(7, s));
+    const i = Math.min(6, Math.floor(s));
+    return lerp(STEPS[i].x, STEPS[i + 1].x, s - i);
+  }
+  function pathY(s) {
+    s = Math.max(0, Math.min(7, s));
+    const NY = STEPS[2].y;                       // net height (all nets equal)
+    if (s <= 2) {                                // dive off the board (apex just behind it)
+      const sa = -0.6;
+      const A = (NY - STEPS[0].y) / ((2 - sa) * (2 - sa) - sa * sa);
+      return STEPS[0].y - A * sa * sa + A * (s - sa) * (s - sa);
+    }
+    if (s <= 4) {                                // bounce over the LEFT net, apex at s=3
+      const ya = STEPS[3].y;
+      return ya + (NY - ya) * (s - 3) * (s - 3);
+    }
+    if (s <= 6) {                                // bounce over the MID net, apex at s=5
+      const ya = STEPS[5].y;
+      return ya + (NY - ya) * (s - 5) * (s - 5);
+    }
+    const ya = NY - 52;                          // hop off the RIGHT net into the ambulance
+    return ya + (NY - ya) / 0.25 * (s - 6.5) * (s - 6.5);
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Audio (Web Audio API — all tones generated, no files)
+  // ---------------------------------------------------------------------------
+  let audioCtx = null;
+  let muted = false;
+
+  function ac() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, dur, type = "square", vol = 0.15, slideTo = null) {
+    if (muted) return;
+    const c = ac();
+    const t0 = c.currentTime;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  const sndMove   = () => tone(520, 0.05, "square", 0.10);
+  const sndTick   = () => tone(1500, 0.015, "square", 0.030);
+  const sndBounce = () => tone(680, 0.07, "square", 0.13, 960);
+  const sndSiren  = () => { tone(880, 0.12, "square", 0.12); setTimeout(() => tone(1160, 0.14, "square", 0.12), 120); };
+  const sndMiss   = () => tone(240, 0.35, "sawtooth", 0.18, 90);
+  const sndOver   = () => [440, 330, 247, 165].forEach((f, i) => setTimeout(() => tone(f, 0.24, "square", 0.16), i * 190));
+
+  // ---------------------------------------------------------------------------
+  //  Game state
+  // ---------------------------------------------------------------------------
+  let state = "title";        // title | playing | gameover
+  let mode  = "A";            // "A" | "B"
+  let score = 0;
+  let lives = 3;
+  let hi = +(localStorage.getItem("fireRescueHi") || 0);
+  let newRecord = false;
+  let stretcherPos = 1;       // 0 | 1 | 2
+  let jumpers = [];
+  let overDelay = 0;
+  let time = 0;
+
+  // Metronome
+  let beatT = 0;              // seconds until next beat
+  let beatFlash = 0;         // 0..1 visual pulse
+  let beatsSinceSpawn = 999;
+
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const level = () => Math.floor(score / 5);
+
+  // Tempo: starts slow, tightens gradually with score. GAME B is faster.
+  const beatDur = () => mode === "B"
+    ? Math.max(0.30, 0.58 - level() * 0.026)
+    : Math.max(0.40, 0.80 - level() * 0.030);
+
+  // Gap (in beats) between successive jumpers leaving the window.
+  //  Every value here keeps at most ONE net-catch due on any single beat, so a
+  //  player locked to the tempo can always be in place — pure rhythm, no luck.
+  //  (2 and 4 are skipped on purpose: they force two simultaneous catches.)
+  //   GAME A: 8 -> 3   (roomy, then the tidy L-M-R chase loop)
+  //   GAME B: 6 -> 3   (same catch load, far faster tempo = the juggling act)
+  const spacing = () => {
+    const seq = mode === "B" ? [6, 5, 3] : [8, 7, 6, 5, 3];
+    return seq[Math.min(seq.length - 1, level())];
+  };
+
+  function makeJumper() {
+    return {
+      step: 0, t: 1, dur: 0.5,
+      stepT: 0,                                   // countdown to this jumper's next step
+      jitter: (Math.random() * 2 - 1) * 0.09,     // ±0.09s wobble on the leap off the board
+      fx: 0, fy: 0,                               // frozen spot used while falling after a miss
+      pending: false, dead: false, rescued: false, splat: 0, remove: false,
+    };
+  }
+  function renderPos(j) {
+    if (j.dead) return { x: j.fx, y: lerp(j.fy, GROUND - 4, j.t * j.t) };
+    return { x: pathX(j.step - 1 + j.t), y: pathY(j.step - 1 + j.t) };
+  }
+
+  function startGame(m) {
+    ac();
+    mode = m;
+    score = 0; lives = 3; jumpers = []; stretcherPos = 1;
+    overDelay = 0; newRecord = false;
+    beatT = 0.35; beatFlash = 0; beatsSinceSpawn = 999;
+    state = "playing";
+  }
+  function registerMiss() {
+    sndMiss();
+    lives = Math.max(0, lives - 1);
+    if (lives === 0 && overDelay <= 0) overDelay = 1.0;
+  }
+  function triggerGameOver() {
+    state = "gameover";
+    if (score > hi) { hi = score; newRecord = true; localStorage.setItem("fireRescueHi", hi); }
+    sndOver();
+  }
+  function moveLeft()  { if (state === "playing" && stretcherPos > 0) { stretcherPos--; sndMove(); } }
+  function moveRight() { if (state === "playing" && stretcherPos < 2) { stretcherPos++; sndMove(); } }
+
+  // ---------------------------------------------------------------------------
+  //  Stepping — each jumper walks the fixed route one step per beat. The global
+  //  metronome stays dead-on; each jumper's leap is nudged ±0.09s so a crowd
+  //  never moves in perfect unison.
+  // ---------------------------------------------------------------------------
+  // Resolve what happens when a jumper actually REACHES a net / the ambulance.
+  // Called on arrival (j.t hits 1) — not when the step starts — so the player
+  // has the whole beat, watching the jumper come down, to get the mat in place.
+  function resolveArrival(j) {
+    j.pending = false;
+    if (j.step === 7) {
+      j.rescued = true;
+      score++;
+      sndSiren();
+      return;
+    }
+    if (stretcherPos === NET_STEP[j.step]) {
+      sndBounce();                          // caught — bounces on the next step
+    } else {
+      const p = renderPos(j);
+      j.dead = true;                        // missed — drops straight to the ground
+      j.fx = p.x; j.fy = p.y;
+      j.t = 0; j.dur = beatDur() * 0.85;
+      j.splat = 1.0;
+      registerMiss();
+    }
+  }
+
+  function advanceJumper(j) {
+    if (j.dead || j.rescued) return;
+    if (j.pending) resolveArrival(j);        // consume an unhandled arrival first
+    if (j.dead || j.rescued) return;
+    j.step++;
+    j.t = 0;
+    j.dur = beatDur();
+    if (j.step === 7 || j.step in NET_STEP) j.pending = true;
+  }
+
+  function onBeat() {
+    sndTick();
+    beatFlash = 1;
+    beatsSinceSpawn++;
+    if (state === "playing" && overDelay <= 0 && beatsSinceSpawn >= spacing()) {
+      const j = makeJumper();
+      j.stepT = beatDur() + j.jitter;        // ~one beat poised on the board, jittered
+      jumpers.push(j);
+      beatsSinceSpawn = 0;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Update
+  // ---------------------------------------------------------------------------
+  function update(dt) {
+    beatFlash = Math.max(0, beatFlash - dt * 4);
+
+    if (state === "playing" && overDelay <= 0) {
+      beatT -= dt;
+      if (beatT <= 0) { beatT += beatDur(); onBeat(); }
+    }
+
+    for (const j of jumpers) {
+      if (!j.dead && !j.rescued && overDelay <= 0) {
+        j.stepT -= dt;
+        if (j.stepT <= 0) { advanceJumper(j); j.stepT += j.dur; }
+      }
+      j.t = Math.min(1, j.t + dt / j.dur);
+      if (j.pending && j.t >= 1 && overDelay <= 0) resolveArrival(j);
+      if (j.dead) j.splat -= dt;
+      if (j.rescued && j.t >= 1) j.remove = true;
+    }
+    jumpers = jumpers.filter(j => !j.remove && !(j.dead && j.splat <= 0));
+
+    if (overDelay > 0) {
+      overDelay -= dt;
+      if (overDelay <= 0) triggerGameOver();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Drawing helpers
+  // ---------------------------------------------------------------------------
+  const SEGMAP = {
+    0: "abcdef", 1: "bc", 2: "abged", 3: "abgcd", 4: "fgbc",
+    5: "afgcd", 6: "afgecd", 7: "abc", 8: "abcdefg", 9: "abcdfg",
+  };
+  function drawDigit(x, y, w, h, d, on, off) {
+    const t = Math.max(2, w * 0.17);
+    const segs = {
+      a: [x + t,       y,                 w - 2 * t, t],
+      g: [x + t,       y + h / 2 - t / 2, w - 2 * t, t],
+      d: [x + t,       y + h - t,         w - 2 * t, t],
+      f: [x,           y + t,             t, h / 2 - 1.5 * t],
+      b: [x + w - t,   y + t,             t, h / 2 - 1.5 * t],
+      e: [x,           y + h / 2 + 0.5 * t, t, h / 2 - 1.5 * t],
+      c: [x + w - t,   y + h / 2 + 0.5 * t, t, h / 2 - 1.5 * t],
+    };
+    const active = d == null ? "" : SEGMAP[d];
+    for (const k in segs) {
+      ctx.fillStyle = active.indexOf(k) >= 0 ? on : off;
+      const s = segs[k];
+      ctx.fillRect(s[0], s[1], s[2], s[3]);
+    }
+  }
+  function drawNumber(left, y, w, h, value, digits, on, off) {
+    const str = String(Math.max(0, Math.floor(value))).padStart(digits, " ");
+    const gap = Math.max(3, w * 0.3);
+    for (let i = 0; i < digits; i++) {
+      const c = str[i];
+      drawDigit(left + i * (w + gap), y, w, h, c === " " ? null : +c, on, off);
+    }
+  }
+  function drawMissIcon(x, y, sz, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x, y); ctx.lineTo(x + sz, y + sz);
+    ctx.moveTo(x + sz, y); ctx.lineTo(x, y + sz);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+  }
+
+  function drawMedic(x, y, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y - 22, 5, 0, 7); ctx.fill();     // head
+    ctx.fillRect(x - 3, y - 17, 6, 13);                            // body
+    ctx.fillRect(x - 4, y - 4, 3, 8);                              // legs
+    ctx.fillRect(x + 1, y - 4, 3, 8);
+  }
+  function drawRescuers(cx, color) {
+    const y = 356;
+    drawMedic(cx - 24, y, color);
+    drawMedic(cx + 24, y, color);
+    ctx.fillStyle = color;
+    ctx.fillRect(cx - 30, y - 12, 60, 5);   // stretcher mat (catch line ~344)
+  }
+
+  function drawJumper(x, y, color) {
+    const s = Math.sin(time * 22) * 3;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y - 15, 5, 0, 7); ctx.fill();  // head
+    ctx.fillRect(x - 3, y - 11, 6, 11);                         // torso
+    ctx.fillRect(x - 10, y - 9 + s, 7, 3);                      // arms
+    ctx.fillRect(x + 3, y - 9 - s, 7, 3);
+    ctx.fillRect(x - 5, y - 1, 3, 8 + s);                       // legs
+    ctx.fillRect(x + 2, y - 1, 3, 8 - s);
+  }
+  function drawSplat(x, y, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.ellipse(x, y, 15, 5, 0, 0, 7); ctx.fill();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      ctx.fillRect(x + Math.cos(a) * 15 - 1.5, y + Math.sin(a) * 5 - 1.5, 4, 4);
+    }
+  }
+  function drawAmbulance(color) {
+    const x = 506, y = GROUND;
+    ctx.fillStyle = color;
+    ctx.fillRect(x + 12, y - 30, 66, 30);      // box
+    ctx.fillRect(x, y - 20, 16, 20);           // cab
+    ctx.beginPath();
+    ctx.arc(x + 22, y + 2, 6, 0, 7);
+    ctx.arc(x + 62, y + 2, 6, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = LCD_BG;                     // cross cut-out
+    ctx.fillRect(x + 38, y - 24, 14, 4);
+    ctx.fillRect(x + 43, y - 29, 4, 14);
+  }
+  function drawBuilding() {
+    ctx.fillStyle = INK;
+    ctx.fillRect(36, 150, 90, GROUND - 150);
+    ctx.fillRect(22, 148, 118, 12);             // roof parapet
+    ctx.fillStyle = LCD_BG;                      // windows
+    for (let r = 0; r < 4; r++)
+      for (let c = 0; c < 2; c++)
+        ctx.fillRect(50 + c * 34, 182 + r * 42, 22, 26);
+    ctx.fillRect(104, 160, 20, 24);             // rooftop doorway onto the board
+  }
+  function drawLedge() {                         // the diving board (ひさし)
+    ctx.fillStyle = INK;
+    ctx.fillRect(100, 182, 66, 5);
+    ctx.beginPath();
+    ctx.moveTo(122, 187); ctx.lineTo(150, 187); ctx.lineTo(122, 206);
+    ctx.closePath(); ctx.fill();
+  }
+  function drawRoute() {
+    ctx.strokeStyle = GHOST; ctx.lineWidth = 2;
+    ctx.setLineDash([2, 6]);
+    ctx.beginPath();
+    for (let k = 0; k <= 84; k++) {
+      const s = k / 12;
+      k ? ctx.lineTo(pathX(s), pathY(s)) : ctx.moveTo(pathX(s), pathY(s));
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = GHOST;
+    for (const p of P) { ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, 7); ctx.fill(); }
+  }
+  function drawBeatDot() {
+    const cx = W / 2, cy = 400;
+    ctx.fillStyle = GHOST;
+    ctx.beginPath(); ctx.arc(cx, cy, 6, 0, 7); ctx.fill();
+    ctx.globalAlpha = beatFlash;
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.arc(cx, cy, 6 + beatFlash * 4, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Render
+  // ---------------------------------------------------------------------------
+  function render() {
+    // LCD ground
+    ctx.fillStyle = LCD_BG;
+    ctx.fillRect(0, 0, W, H);
+
+    // --- top status bar ---
+    ctx.fillStyle = INK;
+    ctx.font = "bold 15px 'Courier New', monospace";
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText("SCORE", 16, 32);
+    drawNumber(78, 12, 17, 26, score, 4, INK, GHOST);
+
+    ctx.fillText("HI", 250, 32);
+    drawNumber(276, 15, 13, 20, hi, 4, INK, GHOST);
+
+    ctx.fillText("MISS", 424, 32);
+    for (let i = 0; i < 3; i++)
+      drawMissIcon(480 + i * 24, 14, 15, i < 3 - lives ? INK : GHOST);
+
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(10, 46); ctx.lineTo(W - 10, 46); ctx.stroke();
+
+    // --- static scene ---
+    drawBuilding();
+    drawLedge();
+    ctx.fillStyle = INK;
+    ctx.fillRect(0, GROUND, W, 3);
+    drawAmbulance(INK);
+
+    // fixed route + ghost jumper poised on the diving board
+    drawRoute();
+    drawJumper(SPAWN.x, SPAWN.y, GHOST);
+    if (state === "playing") drawBeatDot();
+
+    // rescuers: ghost at every slot, solid at the active one
+    for (let i = 0; i < 3; i++)
+      drawRescuers(P[i].x, i === stretcherPos ? INK : GHOST);
+
+    // jumpers
+    for (const j of jumpers) {
+      const p = renderPos(j);
+      if (j.dead && j.t >= 1) drawSplat(p.x, GROUND - 2, INK);
+      else if (j.step === 0) drawJumper(p.x, p.y + Math.sin(time * 9) * 1.3, INK); // poised, bobbing
+      else drawJumper(p.x, p.y, INK);
+    }
+
+    // subtle vignette
+    const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.8);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(15,20,5,0.22)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // --- overlays ---
+    if (state !== "playing") {
+      ctx.fillStyle = "rgba(154,167,127,0.86)";
+      ctx.fillRect(48, 84, W - 96, 232);
+      ctx.strokeStyle = INK; ctx.lineWidth = 3;
+      ctx.strokeRect(48, 84, W - 96, 232);
+
+      ctx.fillStyle = INK;
+      ctx.textAlign = "center";
+      const blink = Math.floor(time * 2) % 2 === 0;
+
+      if (state === "title") {
+        ctx.font = "bold 38px 'Courier New', monospace";
+        ctx.fillText("FIRE RESCUE", W / 2, 140);
+        ctx.font = "bold 14px 'Courier New', monospace";
+        ctx.fillText("ピッ…ピッ…のテンポで住人が1マスずつ進む", W / 2, 176);
+        ctx.fillText("拍に合わせてネットを 左→中→右 と動かせ", W / 2, 198);
+        ctx.fillText("3回受けて救急車へ = +1点 / 3ミスで終了", W / 2, 220);
+        ctx.font = "bold 20px 'Courier New', monospace";
+        ctx.fillText("◀ GAME A     GAME B ▶", W / 2, 262);
+        if (blink) {
+          ctx.font = "bold 13px 'Courier New', monospace";
+          ctx.fillText("A=やさしい / B=高速お手玉  (SPACE=A)", W / 2, 292);
+        }
+      } else {
+        ctx.font = "bold 38px 'Courier New', monospace";
+        ctx.fillText("GAME OVER", W / 2, 140);
+        ctx.font = "bold 18px 'Courier New', monospace";
+        ctx.fillText("GAME " + mode + "   SCORE  " + score, W / 2, 178);
+        ctx.fillText("HI  " + hi, W / 2, 202);
+        if (newRecord && blink) {
+          ctx.font = "bold 16px 'Courier New', monospace";
+          ctx.fillText("★ NEW RECORD ★", W / 2, 226);
+        }
+        ctx.font = "bold 18px 'Courier New', monospace";
+        ctx.fillText("◀ GAME A     GAME B ▶", W / 2, 268);
+        if (blink) {
+          ctx.font = "bold 13px 'Courier New', monospace";
+          ctx.fillText("SPACE で同じモードをもう一度", W / 2, 296);
+        }
+      }
+      ctx.textAlign = "left";
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Loop
+  // ---------------------------------------------------------------------------
+  let last = 0;
+  function loop(ts) {
+    const dt = Math.min(0.05, (ts - last) / 1000 || 0);
+    last = ts;
+    time += dt;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------------------------------------------------------------------------
+  //  Input
+  // ---------------------------------------------------------------------------
+  function press(side) {
+    if (state !== "playing") { startGame(side === "L" ? "A" : "B"); return; }
+    side === "L" ? moveLeft() : moveRight();
+  }
+
+  const leftBtn = document.getElementById("leftBtn");
+  const rightBtn = document.getElementById("rightBtn");
+  leftBtn.addEventListener("pointerdown", e => { e.preventDefault(); press("L"); });
+  rightBtn.addEventListener("pointerdown", e => { e.preventDefault(); press("R"); });
+
+  canvas.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    press((e.clientX - r.left) < r.width / 2 ? "L" : "R");
+  });
+
+  window.addEventListener("keydown", e => {
+    const k = e.key;
+    if (["ArrowLeft", "ArrowRight", "a", "A", "d", "D", " "].includes(k)) e.preventDefault();
+    if (state !== "playing") {
+      if (k === " " || k === "Enter") startGame(state === "gameover" ? mode : "A");
+      return;
+    }
+    if (k === "ArrowLeft" || k === "a" || k === "A") moveLeft();
+    else if (k === "ArrowRight" || k === "d" || k === "D") moveRight();
+    else if (k === "m" || k === "M") toggleMute();
+  });
+
+  const muteBtn = document.getElementById("muteBtn");
+  function toggleMute() {
+    muted = !muted;
+    muteBtn.innerHTML = muted ? "&#128263;" : "&#128266;";
+    if (!muted) ac();
+  }
+  muteBtn.addEventListener("pointerdown", e => { e.preventDefault(); toggleMute(); });
+
+  // block pinch / double-tap zoom
+  document.addEventListener("gesturestart", e => e.preventDefault());
+  document.addEventListener("dblclick", e => e.preventDefault());
+  document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+})();
+</script>
+</body>
+</html>
