@@ -1,8 +1,8 @@
 # HAMZWORKERZ games
 
-ブラウザで遊べる自作ゲーム置き場。GitHub Pages で公開（リポジトリ名 `webemon0101.github.io`）。
+ブラウザで遊べる自作ゲーム置き場。GitHub Pages で公開。
 
-**https://webemon0101.github.io/**
+**https://webemon0101.github.io/games/**
 
 | ゲーム | フォルダ | 内容 |
 |---|---|---|
@@ -22,6 +22,8 @@
 
 ## 広告 (Google AdSense)
 
-- 各ページの `<head>` にローダー、ルートに `ads.txt`（`https://webemon0101.github.io/ads.txt`）。
+- 各ページの `<head>` にローダー。`ads.txt` はリポジトリ直下（`/games/ads.txt`）に配置。
+  ※AdSense はドメイン直下 `webemon0101.github.io/ads.txt` しか読まないため、
+  「ads.txt が見つからない」警告は残る（収益化はブロックされない）。
 - メニュー `index.html` に手動ディスプレイ枠あり。AdSense で作成した10桁のスロットIDを
   `data-ad-slot="0000000000"` と差し替えると有効化。未配信の間は自動で非表示。
