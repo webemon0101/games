@@ -1,4 +1,4 @@
-# webemon games
+# HAMZWORKERZ games
 
 ブラウザで遊べる自作ゲーム置き場。GitHub Pages で公開。
 
