@@ -33,16 +33,24 @@
 
   #cam-video { position: absolute; left: -10000px; top: 0; width: 320px; height: 240px; pointer-events: none; }
   #cam {
-    position: absolute; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom));
-    width: clamp(116px, 30vw, 188px); aspect-ratio: 4/3; z-index: 4;
+    position: absolute; left: 8px; top: calc(52px + env(safe-area-inset-top));
+    width: clamp(96px, 26vw, 150px); aspect-ratio: 4/3; z-index: 4;
     border: 2px solid rgba(255,255,255,.45); border-radius: 10px;
     background: #000; opacity: .92; box-shadow: 0 6px 18px rgba(0,0,0,.5);
   }
+  #cam[hidden] { display: none; }
   #camTag {
-    position: absolute; left: 14px; z-index: 5; font-size: 9px; letter-spacing: 2px;
-    color: #9fb0c0; bottom: calc(10px + env(safe-area-inset-bottom));
+    position: absolute; left: 12px; z-index: 5; font-size: 9px; letter-spacing: 2px;
+    color: #35e07f; top: calc(52px + env(safe-area-inset-top));
     transform: translateY(-100%); text-shadow: 0 1px 3px #000;
   }
+  #camTag[hidden] { display: none; }
+  #btnCam {
+    position: absolute; z-index: 7; right: 10px; top: calc(54px + env(safe-area-inset-top));
+    border: 2px solid rgba(255,255,255,.35); background: rgba(10,10,14,.6); color: #fff;
+    font: 700 11px/1 system-ui,sans-serif; padding: 7px 10px; border-radius: 8px; cursor: pointer;
+  }
+  #btnCam[hidden] { display: none; }
 
   /* HUD */
   #hud { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
@@ -79,6 +87,22 @@
   #turn .bar i { display: block; height: 100%; width: 100%; background: #35e07f; transform-origin: left; }
   #turn .you { margin-top: 6px; font-size: clamp(11px,3vw,14px); }
   #turn .you.ok { color: #35e07f; } #turn .you.no { color: #ff6b6b; }
+
+  /* bottom pose buttons — the primary control */
+  #poseBtns {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  #poseBtns button {
+    pointer-events: auto; cursor: pointer; border: 2px solid rgba(255,255,255,.25);
+    background: linear-gradient(rgba(40,40,48,.92), rgba(20,20,26,.92)); color: #fff;
+    border-radius: 12px; padding: 6px 2px; height: clamp(58px, 15vw, 88px);
+    font: 800 clamp(12px,3.4vw,16px)/1.15 system-ui,sans-serif; letter-spacing: 1px;
+  }
+  #poseBtns button b { display: block; font-size: clamp(15px,4.4vw,22px); color: #ffd23f; margin-top: 2px; }
+  #poseBtns button.held { border-color: #35e07f; background: linear-gradient(#1e5c3a, #123b26); }
+  #poseBtns button:active { transform: translateY(2px); }
 
   .flashmsg {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -141,9 +165,10 @@
     <video id="cam-video" playsinline muted autoplay></video>
     <canvas id="game"></canvas>
   </div>
-  <canvas id="cam"></canvas>
-  <div id="camTag">YOU</div>
+  <canvas id="cam" hidden></canvas>
+  <div id="camTag" hidden>● LIVE</div>
   <button id="btnMute" aria-label="sound">&#128266;</button>
+  <button id="btnCam" hidden>カメラ</button>
 
   <div id="hud" hidden>
     <div class="topbar">
@@ -161,37 +186,33 @@
       </div>
     </div>
     <div class="flashmsg" id="hFlash"></div>
+    <div id="poseBtns">
+      <button data-p="OVERHEAD">上<b>▲</b></button>
+      <button data-p="SIDE">横<b>◀▶</b></button>
+      <button data-p="LOWER">下<b>▼</b></button>
+      <button data-p="CROSS">クロス<b>✕</b></button>
+    </div>
   </div>
 
   <div class="screen" id="scrMenu">
     <div class="marchrow" id="menuRow"></div>
     <h1>MUSCLE<br>ESCAPE</h1>
-    <p>崩れる工場を<strong>マッチョの大行進</strong>で脱出！ 先頭が壁をぶち破り、列が前進、
-       そして<strong>自分の番</strong>が来る。迫る「人型の穴」に体のポーズを合わせろ。
-       カメラに<strong>頭〜手首</strong>が写ればOK。</p>
+    <p>崩れる工場を<strong>マッチョの大行進</strong>で脱出！ 迫る「人型の穴」に
+       ポーズを合わせて壁をぶち破れ。<br>
+       <strong>下の4ボタン</strong>（PCは <strong>A / S / D / F</strong> キー）で操作。
+       カメラを許可すれば<strong>体の動き</strong>でも操作できます。</p>
     <div class="poselist" id="poseGuide"></div>
-    <button class="bigbtn" id="btnAllow">カメラを許可して行進スタート</button>
-    <div class="hint">カメラ映像は端末内だけで処理され、どこにも送信されません。</div>
-    <div class="hint" id="ver" style="opacity:.55">build v3 — 読込中</div>
-  </div>
-
-  <div class="screen" id="scrLoad" hidden>
-    <div class="spin"></div>
-    <div id="loadMsg" style="font-family:system-ui;font-weight:700;color:#ffd23f;letter-spacing:1px">AI（骨格認識）を準備中…</div>
-    <div class="err" id="loadErr" hidden></div>
-    <button class="bigbtn sm" id="btnRetry" hidden>もう一度</button>
-  </div>
-
-  <div class="screen" id="scrReady" hidden style="background:rgba(0,0,0,.4)">
-    <h1 style="font-size:clamp(24px,7vw,50px)">READY?</h1>
-    <p>全身は不要。<strong>頭〜手首</strong>がフレームに入る位置に立って、下の「YOU」映像で骨格が出るのを確認。</p>
-    <button class="bigbtn" id="btnStart">行進スタート！</button>
+    <button class="bigbtn" id="btnStart">スタート</button>
+    <label class="hint" style="display:flex;gap:7px;align-items:center;justify-content:center;cursor:pointer">
+      <input type="checkbox" id="useCam" checked style="width:16px;height:16px"> カメラ（AI骨格認識）も使う
+    </label>
+    <div class="hint" id="ver" style="opacity:.5">build v4</div>
   </div>
 
   <div class="screen" id="scrOver" hidden>
     <h1>脱落…</h1>
     <p id="overStat" style="font-size:clamp(15px,4.4vw,22px);color:#fff"></p>
-    <button class="bigbtn" id="btnAgain">列に戻る</button>
+    <button class="bigbtn" id="btnAgain">もう一度</button>
   </div>
 </div>
 
@@ -208,14 +229,14 @@
   function fatal(m) { shownErr = true; errbar.style.display = "block"; errbar.textContent = "⚠ " + m; }
   window.addEventListener("error", e => { if (!shownErr) fatal((e.message || e.error || "script error") + "  @" + String(e.filename || "").split("/").pop() + ":" + e.lineno); });
   window.addEventListener("unhandledrejection", e => { if (!shownErr) fatal("promise: " + (e.reason && (e.reason.message || e.reason))); });
-  { const v = document.getElementById("ver"); if (v) v.textContent = "build v3 — スクリプトOK"; }
-
+  try { document.getElementById("ver").textContent = "build v4 ✓"; } catch (e) {}
   const $ = id => document.getElementById(id);
   const video = $("cam-video");
   const cam = $("cam"), camCtx = cam.getContext("2d");
+  const camTag = $("camTag");
   const game = $("game"), g = game.getContext("2d");
   const hud = $("hud");
-  const scrMenu = $("scrMenu"), scrLoad = $("scrLoad"), scrReady = $("scrReady"), scrOver = $("scrOver");
+  const scrMenu = $("scrMenu"), scrOver = $("scrOver");
   const hScore = $("hScore"), hWalls = $("hWalls"), hLives = $("hLives"), hFlash = $("hFlash");
   const elTurn = $("turn"), turnName = $("turnName"), turnBar = $("turnBar"), turnYou = $("turnYou");
   const turnIcon = $("turnIcon"), turnIconCtx = turnIcon.getContext("2d");
@@ -391,74 +412,69 @@
     if (Lwr.y > shY + u * 1.45 && Rwr.y > shY + u * 1.45 && Math.abs(Lwr.x - Rwr.x) < shW * 2.1 && !crossed) return "LOWER";
     return null;
   }
-  function currentPose() {
+  function camPose() {
     if (!poseHist.length) return null;
     const c = {}; for (const p of poseHist) if (p) c[p] = (c[p] || 0) + 1;
     let best = null, n = 0; for (const k in c) if (c[k] > n) { n = c[k]; best = k; }
     return n >= Math.ceil(poseHist.length * 0.4) ? best : null;
   }
 
+  // heldPose is what the game checks. Set by the on-screen buttons / keys,
+  // and continuously by the camera when a pose is detected.
+  let heldPose = null;
+  function setPose(p) { heldPose = p; syncPoseBtns(); }
+  function currentPose() { return heldPose; }
+
   // =====================================================================
-  //  MediaPipe
+  //  Optional camera / MediaPipe (best-effort — game runs without it)
   // =====================================================================
-  let pose = null, mpCamera = null, mpReady = false, loadTO = null;
+  let pose = null, mpCamera = null, camActive = false, camTried = false;
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  function onResults(res) {
-    landmarks = res.poseLandmarks || null;
-    poseHist.push(classify(landmarks)); if (poseHist.length > 7) poseHist.shift();
-    if (!mpReady) { mpReady = true; clearTimeout(loadTO); resize(); GS.phase = "ready"; show(scrReady); hide(scrLoad); }
-  }
   function loadScript(src) {
     return new Promise((res, rej) => {
       const s = document.createElement("script");
       s.src = src; s.onload = () => res();
-      s.onerror = () => rej(new Error("スクリプト読み込み失敗: " + src.split("/").pop()));
+      s.onerror = () => rej(new Error("load fail: " + src.split("/").pop()));
       document.head.appendChild(s);
     });
   }
-  let camFrames = 0;
-  async function boot() {
-    show(scrLoad); hide(scrMenu); $("loadErr").hidden = true; $("btnRetry").hidden = true;
-    camFrames = 0;
-    $("loadMsg").textContent = "ライブラリを読み込み中…";
-    clearTimeout(loadTO);
-    loadTO = setTimeout(() => {
-      if (!mpReady) showError(camFrames > 3
-        ? "カメラは動作していますが、AIモデルの読み込みが終わりません。通信環境／広告ブロッカーをご確認のうえ、もう一度お試しください。"
-        : "カメラを取得できませんでした。ブラウザのカメラ許可設定と、他アプリがカメラを使っていないかご確認ください。");
-    }, 22000);
+  function camNote(msg, ok) {
+    const b = $("btnCam"); b.hidden = false;
+    b.textContent = ok ? "📷 ON" : "📷 …";
+    b.title = msg || "";
+  }
+  function onPose(res) {
+    landmarks = res.poseLandmarks || null;
+    poseHist.push(classify(landmarks)); if (poseHist.length > 7) poseHist.shift();
+    if (!camActive) { camActive = true; cam.hidden = false; camTag.hidden = false; camNote("カメラ入力ON", true); }
+    const cp = camPose();
+    if (cp) heldPose = cp, syncPoseBtns();
+  }
+  async function initCamera() {
+    if (camTried && camActive) return;
+    camTried = true;
     try {
       if (typeof Camera === "undefined") await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js");
       if (typeof Pose === "undefined") await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js");
-      if (typeof Pose === "undefined" || typeof Camera === "undefined")
-        throw new Error("MediaPipe を読み込めませんでした。広告ブロッカーや通信制限で cdn.jsdelivr.net がブロックされていないかご確認ください。");
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("このブラウザ/接続ではカメラを使用できません（HTTPS必須）。");
-      $("loadMsg").textContent = "カメラの許可を待っています…";
-
+      if (typeof Pose === "undefined" || typeof Camera === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        camNote("カメラ/AIを読み込めません（ボタン操作で続行）"); return;
+      }
       pose = new Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${f}` });
       pose.setOptions({ modelComplexity: isMobile ? 0 : 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-      pose.onResults(onResults);
-
+      pose.onResults(onPose);
       mpCamera = new Camera(video, {
-        onFrame: async () => {
-          camFrames++;
-          if (camFrames === 1) $("loadMsg").textContent = "AIモデルを読み込み中…（初回は数十秒かかります）";
-          try { await pose.send({ image: video }); } catch (e) {}
-        },
+        onFrame: async () => { try { await pose.send({ image: video }); } catch (e) {} },
         facingMode: "user", width: isMobile ? 480 : 640, height: isMobile ? 360 : 480,
       });
       await mpCamera.start();
-      $("loadMsg").textContent = "カメラOK。AIモデルを読み込み中…";
+      camNote("カメラ起動、AIモデル読込中…");
     } catch (err) {
       const n = err && err.name;
-      showError(n === "NotAllowedError" || n === "SecurityError"
-        ? "カメラの使用が許可されませんでした。アドレスバーのカメラアイコンから「許可」に変更して、もう一度お試しください。"
-        : n === "NotFoundError" || n === "DevicesNotFoundError" ? "カメラが見つかりませんでした。"
-        : n === "NotReadableError" || n === "TrackStartError" ? "カメラを他のアプリが使用中です。閉じてからお試しください。"
-        : (err && err.message) || "カメラまたはAIの初期化に失敗しました。");
+      camNote(n === "NotAllowedError" ? "カメラ不許可（ボタン操作で続行）"
+        : n === "NotReadableError" ? "カメラが他アプリで使用中（ボタン操作で続行）"
+        : "カメラを使えません（ボタン操作で続行）");
     }
   }
-  function showError(m) { const e = $("loadErr"); e.hidden = false; e.textContent = m; $("btnRetry").hidden = false; $("loadMsg").textContent = ""; }
 
   // =====================================================================
   //  Game
@@ -503,6 +519,7 @@
       splat(); GS.tumble = 0.001;
       flashMsg(FAILS[(Math.random() * FAILS.length) | 0], "#ff5040");
     }
+    heldPose = null; syncPoseBtns();
     syncHud();
     if (GS.lives <= 0) return gameOver();
     GS.nextAt = now + (GS.tumble > 0 ? 1.15 : (GS.comboLeft > 0 ? 0.35 : 0.9));
@@ -517,17 +534,22 @@
     }
   }
   function startGame() {
-    initAudio(); if (ac.state === "suspended") ac.resume();
+    try { initAudio(); if (ac.state === "suspended") ac.resume(); } catch (e) {}
     Object.assign(GS, { phase: "playing", score: 0, lives: 3, cleared: 0, wall: null, scroll: 0, runPhase: 0, tumble: 0, comboLeft: 0, particles: [], shake: 0, flash: 0 });
+    heldPose = null;
     bpm = targetBpm(); setBgmMode("play"); startBGM("play");
-    hide(scrReady); hide(scrOver); hud.hidden = false;
-    buildLives(); syncHud();
-    GS.nextAt = performance.now() / 1000 + 1.4;
+    hide(scrMenu); hide(scrOver); hud.hidden = false;
+    buildLives(); syncHud(); syncPoseBtns(); resize();
+    GS.nextAt = performance.now() / 1000 + 1.6;
+    if ($("useCam").checked) initCamera();
   }
   function gameOver() {
     GS.phase = "over"; bpm = 128; setBgmMode("menu");
     $("overStat").innerHTML = `突破した壁 <b style="color:#ffd23f">${GS.cleared}</b> &nbsp;/&nbsp; SCORE <b style="color:#ffd23f">${GS.score}</b>`;
     setTimeout(() => { hud.hidden = true; show(scrOver); }, 900);
+  }
+  function syncPoseBtns() {
+    document.querySelectorAll("#poseBtns button").forEach(b => b.classList.toggle("held", b.dataset.p === heldPose));
   }
   function buildLives() { hLives.innerHTML = ""; for (let i = 0; i < 3; i++) { const d = document.createElement("div"); d.className = "can"; hLives.appendChild(d); } }
   function syncHud() { hScore.textContent = GS.score; hWalls.textContent = GS.cleared; [...hLives.children].forEach((c, i) => c.classList.toggle("lost", i >= GS.lives)); }
@@ -544,9 +566,7 @@
     if (GS.shake < 0.3) GS.shake = 0;
     if (bpm < targetBpm() && GS.phase === "playing") bpm = Math.min(targetBpm(), bpm + dt * 6);
 
-    if (GS.phase === "ready") {
-      GS.runPhase += dt * 6; GS.scroll += dt * 5;
-    }
+    if (GS.phase === "menu") { GS.runPhase += dt * 5; GS.scroll += dt * 4; }
     if (GS.phase === "playing") {
       GS.runPhase += dt * (7 + tier() * 2.2);
       GS.scroll += dt * runSpeed();
@@ -758,6 +778,7 @@
   }
 
   function drawCam() {
+    if (!camActive) return;
     const cw = cam.width, ch = cam.height;
     camCtx.clearRect(0, 0, cw, ch);
     if (!video.videoWidth) { camCtx.fillStyle = "#000"; camCtx.fillRect(0, 0, cw, ch); return; }
@@ -821,13 +842,23 @@
   function show(el) { el.hidden = false; }
   function hide(el) { el.hidden = true; }
 
-  $("btnAllow").addEventListener("click", () => { initAudio(); bpm = 128; startBGM("menu"); boot(); });
-  $("btnRetry").addEventListener("click", boot);
-  $("btnStart").addEventListener("click", startGame);
-  $("btnAgain").addEventListener("click", () => { hide(scrOver); show(scrReady); GS.phase = "ready"; });
-  $("btnMute").addEventListener("click", () => {
+  const tap = (el, fn) => { el.addEventListener("pointerdown", e => { e.preventDefault(); fn(e); }); el.addEventListener("click", e => e.preventDefault()); };
+
+  tap($("btnStart"), startGame);
+  tap($("btnAgain"), () => { hide(scrOver); startGame(); });
+  tap($("btnMute"), () => {
     muted = !muted; $("btnMute").innerHTML = muted ? "&#128263;" : "&#128266;";
     if (master) master.gain.value = muted ? 0 : 0.55;
+  });
+  tap($("btnCam"), () => { camTried = false; initCamera(); });
+
+  // pose input — on-screen buttons + keyboard
+  document.querySelectorAll("#poseBtns button").forEach(b => tap(b, () => setPose(b.dataset.p)));
+  const KEYMAP = { a: "OVERHEAD", s: "SIDE", d: "LOWER", f: "CROSS", 1: "OVERHEAD", 2: "SIDE", 3: "LOWER", 4: "CROSS" };
+  window.addEventListener("keydown", e => {
+    const k = e.key.toLowerCase();
+    if (KEYMAP[k]) { e.preventDefault(); setPose(KEYMAP[k]); }
+    else if ((k === " " || k === "enter") && GS.phase !== "playing") { e.preventDefault(); (GS.phase === "over" ? (hide(scrOver), startGame()) : startGame()); }
   });
 
   // menu marching row + pose guide
