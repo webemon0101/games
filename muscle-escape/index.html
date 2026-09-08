@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-GK5QCXSGJB"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-GK5QCXSGJB');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1a1e">
+<title>MUSCLE ESCAPE — ポーズで壁を突破</title>
+<meta name="google-adsense-account" content="ca-pub-8860612143084575">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
+     crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162/pose.js" crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: #0c0c0f; color: #fff;
+    font-family: "Arial Black", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    touch-action: manipulation;
+  }
+  #app { position: fixed; inset: 0; overflow: hidden; background: #111; }
+  #stage { position: absolute; inset: 0; will-change: transform; }
+  #cam, #game {
+    position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  }
+  #cam { object-fit: cover; background: #000; transform: scaleX(1); }
+  #game { z-index: 2; }
+  #cam-video { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: max(10px, env(safe-area-inset-top)) 14px 8px;
+    gap: 8px;
+    text-shadow: 0 2px 6px rgba(0,0,0,.8);
+  }
+  .stat { font-size: clamp(13px, 3.4vw, 20px); letter-spacing: 1px; line-height: 1.1; }
+  .stat b { display: block; font-size: clamp(19px, 5.4vw, 34px); color: #ffd23f; }
+  .lives { display: flex; gap: 5px; }
+  .can {
+    width: clamp(16px, 4.6vw, 26px); height: clamp(22px, 6.2vw, 34px);
+    border-radius: 4px; background: linear-gradient(#ff5e3a, #c62828);
+    border: 2px solid #fff; position: relative; transition: opacity .2s, filter .2s;
+  }
+  .can::before { content: ""; position: absolute; left: 15%; right: 15%; top: 32%; height: 26%;
+    background: rgba(255,255,255,.9); border-radius: 2px; }
+  .can.lost { opacity: .18; filter: grayscale(1); }
+
+  .posebar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 10px 12px max(14px, env(safe-area-inset-bottom));
+    display: flex; align-items: center; justify-content: center; gap: clamp(10px, 3vw, 26px);
+  }
+  .panel {
+    background: rgba(10,10,14,.62); border: 2px solid rgba(255,255,255,.25);
+    border-radius: 14px; padding: 8px 14px; backdrop-filter: blur(3px);
+    text-align: center; min-width: 40vw;
+  }
+  .panel .k { font-size: clamp(10px, 2.6vw, 13px); letter-spacing: 2px; color: #9fb0c0; }
+  .panel .v { font-size: clamp(17px, 5vw, 30px); letter-spacing: 1px; }
+  .panel.you .v.ok { color: #35e07f; }
+  .panel.you .v.no { color: #ff5b5b; }
+  .panel.need .v { color: #ffd23f; }
+
+  .gauge {
+    position: absolute; left: 8%; right: 8%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 96px);
+    height: 12px; background: rgba(0,0,0,.5); border: 2px solid rgba(255,255,255,.3); border-radius: 8px; overflow: hidden;
+  }
+  .gauge i { display: block; height: 100%; width: 100%; background: #35e07f; transform-origin: left; }
+
+  .flashmsg {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: clamp(46px, 15vw, 130px); font-style: italic; letter-spacing: 2px;
+    -webkit-text-stroke: 3px #000; opacity: 0; transition: opacity .08s;
+    text-shadow: 0 0 30px currentColor;
+  }
+  .flashmsg.show { opacity: 1; animation: pop .45s ease-out; }
+  @keyframes pop { 0%{ transform: scale(.4) rotate(-6deg);} 60%{ transform: scale(1.15) rotate(3deg);} 100%{ transform: scale(1) rotate(0);} }
+
+  /* ---------- full-screen screens ---------- */
+  .screen {
+    position: absolute; inset: 0; z-index: 6;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 22px; text-align: center; overflow-y: auto;
+    background: radial-gradient(circle at 50% 30%, #2a1c12, #0c0c0f 75%);
+  }
+  .screen[hidden] { display: none; }
+  @media (max-height: 720px) { .screen { justify-content: flex-start; } }
+  @media (max-width: 380px) { .poselist { grid-template-columns: repeat(2, 1fr); } }
+  .screen h1 {
+    font-size: clamp(30px, 8.5vw, 68px); line-height: .95; letter-spacing: 1px;
+    color: #ffd23f; -webkit-text-stroke: 2px #7a1f00;
+    text-shadow: 0 6px 0 #7a1f00, 0 10px 24px rgba(0,0,0,.6);
+    transform: rotate(-2deg);
+  }
+  .screen p { max-width: 560px; font-family: system-ui, sans-serif; font-weight: 600;
+    font-size: clamp(12px, 3.2vw, 15px); line-height: 1.7; color: #d9d2c8; }
+  .bigbtn {
+    pointer-events: auto; cursor: pointer; border: none;
+    font-family: inherit; font-size: clamp(18px, 5vw, 26px); letter-spacing: 2px;
+    color: #1a1207; padding: 18px 34px; border-radius: 16px;
+    background: linear-gradient(#ffe37a, #ffb300);
+    box-shadow: 0 8px 0 #a56b00, 0 14px 30px rgba(0,0,0,.5);
+  }
+  .bigbtn:active { transform: translateY(5px); box-shadow: 0 3px 0 #a56b00; }
+  .bigbtn.sm { font-size: clamp(13px, 3.6vw, 17px); padding: 12px 22px; box-shadow: 0 5px 0 #a56b00; }
+  .hint { font-family: system-ui, sans-serif; font-size: 12px; color: #8a8a8a; }
+  .machos { display: flex; gap: 10px; }
+  .machos svg { width: clamp(70px, 22vw, 120px); height: auto; }
+  .load { font-family: system-ui, sans-serif; font-weight: 700; color: #ffd23f; letter-spacing: 1px; }
+  .spin { width: 44px; height: 44px; border: 5px solid rgba(255,255,255,.2); border-top-color: #ffd23f;
+    border-radius: 50%; animation: sp 0.9s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  .err { color: #ff6b6b; font-family: system-ui, sans-serif; font-weight: 700; max-width: 480px; }
+
+  .poselist { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 520px; width: 100%; }
+  .poselist div { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15);
+    border-radius: 10px; padding: 8px 4px; font-family: system-ui, sans-serif; font-weight: 700; font-size: 11px; }
+  .poselist svg { width: 100%; height: 62px; display: block; margin-bottom: 4px; }
+
+  #btnMute {
+    position: absolute; z-index: 7; top: max(8px, env(safe-area-inset-top)); right: 10px;
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4);
+    background: rgba(10,10,14,.55); color: #fff; font-size: 17px; cursor: pointer;
+  }
+  #btnMute:active { transform: scale(.92); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <video id="cam-video" playsinline muted></video>
+    <canvas id="cam"></canvas>
+    <canvas id="game"></canvas>
+  </div>
+
+  <button id="btnMute" aria-label="sound">&#128266;</button>
+
+  <div id="hud" hidden>
+    <div class="topbar">
+      <div class="stat">SCORE<b id="hScore">0</b></div>
+      <div class="stat" style="text-align:center">WALLS<b id="hWalls">0</b></div>
+      <div class="stat" style="text-align:right">LIFE
+        <div class="lives" id="hLives"></div>
+      </div>
+    </div>
+    <div class="gauge"><i id="hGauge"></i></div>
+    <div class="posebar">
+      <div class="panel need"><div class="k">壁のポーズ</div><div class="v" id="hNeed">—</div></div>
+      <div class="panel you"><div class="k">あなた</div><div class="v" id="hYou">—</div></div>
+    </div>
+    <div class="flashmsg" id="hFlash"></div>
+  </div>
+
+  <!-- START / permission -->
+  <div class="screen" id="scrMenu">
+    <div class="machos" id="menuMachos"></div>
+    <h1>MUSCLE<br>ESCAPE</h1>
+    <p>プロテイン工場が大爆発！ あふれ出たプロテインで超マッチョになった脱出者たちが、
+       崩れる工場から<strong>壁をぶち破って</strong>逃げる！<br>
+       迫る「人型の穴」に体のポーズを合わせろ。カメラに<strong>上半身（頭・肩・肘・手首）</strong>が写ればOK。</p>
+    <div class="poselist" id="poseGuide"></div>
+    <button class="bigbtn" id="btnAllow">カメラを許可する</button>
+    <div class="hint">カメラ映像は端末内だけで処理され、どこにも送信されません。</div>
+  </div>
+
+  <!-- loading -->
+  <div class="screen" id="scrLoad" hidden>
+    <div class="spin"></div>
+    <div class="load" id="loadMsg">AI（骨格認識）を準備中…</div>
+    <div class="err" id="loadErr" hidden></div>
+    <button class="bigbtn sm" id="btnRetry" hidden>もう一度</button>
+  </div>
+
+  <!-- ready -->
+  <div class="screen" id="scrReady" hidden style="background:rgba(0,0,0,.35)">
+    <h1 style="font-size:clamp(24px,7vw,52px)">READY?</h1>
+    <p>全身を映さなくてOK。<strong>頭〜手首</strong>がフレームに入る位置に立って。</p>
+    <button class="bigbtn" id="btnStart">スタート！</button>
+  </div>
+
+  <!-- game over -->
+  <div class="screen" id="scrOver" hidden>
+    <h1>YOU<br>CRUSHED</h1>
+    <p id="overStat" style="font-size:clamp(15px,4.4vw,22px);color:#fff"></p>
+    <button class="bigbtn" id="btnAgain">もう一度</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // =========================================================================
+  //  DOM
+  // =========================================================================
+  const $ = id => document.getElementById(id);
+  const app = $("app"), stage = $("stage");
+  const video = $("cam-video");
+  const cam = $("cam"), camCtx = cam.getContext("2d");
+  const game = $("game"), gctx = game.getContext("2d");
+  const hud = $("hud");
+  const scrMenu = $("scrMenu"), scrLoad = $("scrLoad"), scrReady = $("scrReady"), scrOver = $("scrOver");
+  const hScore = $("hScore"), hWalls = $("hWalls"), hLives = $("hLives");
+  const hNeed = $("hNeed"), hYou = $("hYou"), hGauge = $("hGauge"), hFlash = $("hFlash");
+
+  const POSES = ["OVERHEAD", "SIDE", "LOWER", "CROSS"];
+  const POSE_JP = { OVERHEAD: "上（バンザイ）", SIDE: "横（水平）", LOWER: "下（腰）", CROSS: "クロス（胸）" };
+
+  // =========================================================================
+  //  Audio (Web Audio API — all generated)
+  // =========================================================================
+  let ac = null, master = null, muted = false;
+  function initAudio() {
+    if (ac) return;
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    master = ac.createGain(); master.gain.value = 0.55; master.connect(ac.destination);
+  }
+  function noiseBuffer(dur) {
+    const n = ac.sampleRate * dur, b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+  function boom() {
+    if (!ac || muted) return;
+    const t = ac.currentTime;
+    // sub thump
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(32, t + 0.5);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.62);
+    // debris noise
+    const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.5);
+    const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.setValueAtTime(1800, t); f.frequency.exponentialRampToValueAtTime(200, t + 0.45);
+    const ng = ac.createGain(); ng.gain.setValueAtTime(0.7, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    s.connect(f); f.connect(ng); ng.connect(master); s.start(t); s.stop(t + 0.5);
+  }
+  function splat() {
+    if (!ac || muted) return;
+    const t = ac.currentTime;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "square"; o.frequency.setValueAtTime(240, t); o.frequency.exponentialRampToValueAtTime(50, t + 0.35);
+    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.42);
+    const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.25);
+    const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 400;
+    const ng = ac.createGain(); ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    s.connect(f); f.connect(ng); ng.connect(master); s.start(t); s.stop(t + 0.25);
+  }
+  function blip(freq, dur = 0.06, vol = 0.2, type = "square") {
+    if (!ac || muted) return;
+    const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+  }
+
+  // --- BGM: driving synth-bass riff, tempo scales with difficulty ---
+  let bgmOn = false, bgmStep = 0, bgmNext = 0, bgmTimer = null, bpm = 130;
+  const RIFF = [0, 0, 7, 0, 10, 7, 5, 3];   // semitone offsets from root
+  function kick(t) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.18);
+  }
+  function hat(t) {
+    const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.04);
+    const f = ac.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 7000;
+    const g = ac.createGain(); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + 0.05);
+  }
+  function bassNote(t, step) {
+    const root = 41.2; // E1
+    const f = root * Math.pow(2, RIFF[step] / 12);
+    const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), flt = ac.createBiquadFilter();
+    o.type = "sawtooth"; o2.type = "square"; o.frequency.value = f; o2.frequency.value = f * 2;
+    flt.type = "lowpass"; flt.frequency.value = 380 + (bpm - 130) * 26; flt.Q.value = 8;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.26, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+    o.connect(flt); o2.connect(flt); flt.connect(g); g.connect(master);
+    o.start(t); o2.start(t); o.stop(t + 0.17); o2.stop(t + 0.17);
+    if (step % 4 === 0) kick(t);
+    if (step % 2 === 1) hat(t);
+  }
+  function bgmTick() {
+    if (!bgmOn) return;
+    const spb = (60 / bpm) / 2;               // eighth notes
+    while (bgmNext < ac.currentTime + 0.12) {
+      if (!muted) bassNote(bgmNext, bgmStep);
+      bgmNext += spb; bgmStep = (bgmStep + 1) % 8;
+    }
+    bgmTimer = setTimeout(bgmTick, 25);
+  }
+  function startBGM() { if (!ac || bgmOn) return; bgmOn = true; bgmStep = 0; bgmNext = ac.currentTime + 0.05; bgmTick(); }
+  function stopBGM() { bgmOn = false; clearTimeout(bgmTimer); }
+
+  // =========================================================================
+  //  Comical macho silhouettes  (canvas paths — used as wall cut-outs + icons)
+  // =========================================================================
+  function drawMacho(c, pose, cx, cy, s, color) {
+    c.save();
+    c.lineCap = "round"; c.lineJoin = "round";
+    c.strokeStyle = color; c.fillStyle = color;
+    const P = (x, y) => ({ x: cx + x * s, y: cy + y * s });
+    const line = (a, b, w) => { c.lineWidth = w * s; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); };
+    const disc = (p, r) => { c.beginPath(); c.arc(p.x, p.y, r * s, 0, 7); c.fill(); };
+
+    // head + neck
+    disc(P(0, -74), 24);
+    line(P(0, -52), P(0, -34), 24);
+    // torso V
+    const shL = P(-54, -34), shR = P(54, -34), wL = P(-22, 56), wR = P(22, 56);
+    c.beginPath(); c.moveTo(shL.x, shL.y); c.lineTo(shR.x, shR.y); c.lineTo(wR.x, wR.y); c.lineTo(wL.x, wL.y); c.closePath(); c.fill();
+    // legs
+    line(P(-20, 52), P(-26, 152), 30); line(P(20, 52), P(26, 152), 30);
+    disc(P(-30, 156), 12); disc(P(30, 156), 12);
+    // arms
+    const arm = (sh, el, ha) => { line(sh, el, 30); line(el, ha, 26); disc(ha, 15); };
+    if (pose === "OVERHEAD") { arm(shL, P(-60, -74), P(-30, -156)); arm(shR, P(60, -74), P(30, -156)); }
+    else if (pose === "SIDE") { arm(shL, P(-98, -40), P(-156, -38)); arm(shR, P(98, -40), P(156, -38)); }
+    else if (pose === "LOWER") { arm(shL, P(-96, 6), P(-42, 62)); arm(shR, P(96, 6), P(42, 62)); }
+    else if (pose === "CROSS") { arm(shL, P(-42, -8), P(48, 28)); arm(shR, P(42, -8), P(-48, 28)); }
+    c.restore();
+  }
+  const MACHO_SPAN = 340;   // approx figure bbox in unit space
+
+  // title-screen SVG dudes
+  function svgMacho(kind) {
+    const shades = kind === "shades"
+      ? `<rect x="34" y="40" width="32" height="12" rx="3" fill="#111"/><rect x="34" y="40" width="14" height="12" rx="3" fill="#111"/>`
+      : "";
+    const canhat = kind === "can"
+      ? `<rect x="30" y="8" width="40" height="26" rx="4" fill="#ff5e3a" stroke="#fff" stroke-width="3"/><rect x="38" y="16" width="24" height="9" rx="2" fill="#fff"/>`
+      : `<path d="M28 34 Q50 6 72 34 Z" fill="#3a2b1a"/>`;
+    return `<svg viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+      <g fill="#f2b98a" stroke="#7a4a24" stroke-width="3" stroke-linejoin="round">
+      <circle cx="50" cy="42" r="20"/>
+      <path d="M22 78 L78 78 L70 120 L30 120 Z"/>
+      <path d="M22 78 L4 100 L14 112 L30 92 Z"/><path d="M78 78 L96 100 L86 112 L70 92 Z"/>
+      <rect x="34" y="118" width="12" height="28" rx="4"/><rect x="54" y="118" width="12" height="28" rx="4"/>
+      </g>${canhat}${shades}
+      <path d="M40 56 q10 8 20 0" stroke="#7a4a24" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </svg>`;
+  }
+
+  // =========================================================================
+  //  Pose classification (upper body only)
+  // =========================================================================
+  let landmarks = null;
+  let poseHist = [];
+  function vis(l) { return l && (l.visibility === undefined || l.visibility > 0.35); }
+  function classify(L) {
+    if (!L) return null;
+    const need = [0, 11, 12, 13, 14, 15, 16];
+    for (const i of need) if (!vis(L[i])) return null;
+    const nose = L[0], Lsh = L[11], Rsh = L[12], Lel = L[13], Rel = L[14], Lwr = L[15], Rwr = L[16];
+    const shY = (Lsh.y + Rsh.y) / 2;
+    const shMidX = (Lsh.x + Rsh.x) / 2;
+    const shW = Math.abs(Lsh.x - Rsh.x) || 0.02;
+    const vUnit = Math.max(0.05, shY - nose.y);   // ~ head height
+
+    const wristsAbove = Lwr.y < nose.y - 0.02 && Rwr.y < nose.y - 0.02;
+    const elbowsUp = Lel.y < shY + 0.02 && Rel.y < shY + 0.02;
+    if (wristsAbove && elbowsUp) return "OVERHEAD";
+
+    const spread = Math.abs(Lwr.x - Rwr.x);
+    const wristsLevel = Math.abs(Lwr.y - shY) < vUnit * 1.1 && Math.abs(Rwr.y - shY) < vUnit * 1.1;
+    const elbowsLevel = Lel.y < shY + vUnit * 0.7 && Rel.y < shY + vUnit * 0.7;
+    if (!wristsAbove && wristsLevel && elbowsLevel && spread > shW * 2.3) return "SIDE";
+
+    const chestLo = shY + vUnit * 0.15, chestHi = shY + vUnit * 2.4;
+    const wristsChest = Lwr.y > chestLo && Lwr.y < chestHi && Rwr.y > chestLo && Rwr.y < chestHi;
+    const crossed = (Rwr.x - Lwr.x) > shW * 0.15;             // hands swapped sides
+    const centered = Math.abs(Lwr.x - shMidX) < shW * 1.2 && Math.abs(Rwr.x - shMidX) < shW * 1.2;
+    if (wristsChest && crossed && centered) return "CROSS";
+
+    const waistLo = shY + vUnit * 1.5;
+    const wristsLow = Lwr.y > waistLo && Rwr.y > waistLo;
+    const notWide = Math.abs(Lwr.x - Rwr.x) < shW * 2.1;
+    if (wristsLow && notWide && !crossed) return "LOWER";
+
+    return null;
+  }
+  function currentPose() {
+    // majority of recent frames (reduces flicker)
+    if (poseHist.length === 0) return null;
+    const cnt = {};
+    for (const p of poseHist) if (p) cnt[p] = (cnt[p] || 0) + 1;
+    let best = null, n = 0;
+    for (const k in cnt) if (cnt[k] > n) { n = cnt[k]; best = k; }
+    return n >= Math.ceil(poseHist.length * 0.4) ? best : null;
+  }
+
+  // =========================================================================
+  //  MediaPipe Pose + camera
+  // =========================================================================
+  let pose = null, mpCamera = null, mpReady = false;
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+  let loadTimeout = null;
+  function onResults(res) {
+    landmarks = res.poseLandmarks || null;
+    const p = classify(landmarks);
+    poseHist.push(p); if (poseHist.length > 7) poseHist.shift();
+    if (!mpReady) { mpReady = true; clearTimeout(loadTimeout); onModelReady(); }
+  }
+
+  async function boot() {
+    show(scrLoad); hide(scrMenu);
+    $("loadErr").hidden = true; $("btnRetry").hidden = true;
+    $("loadMsg").textContent = "カメラを起動中…";
+    clearTimeout(loadTimeout);
+    loadTimeout = setTimeout(() => {
+      if (!mpReady) showError("AIモデルの読み込みに時間がかかっています。通信環境を確認して、もう一度お試しください。");
+    }, 25000);
+    try {
+      if (typeof Pose === "undefined" || typeof Camera === "undefined")
+        throw new Error("MediaPipe の読み込みに失敗しました（ネットワーク／広告ブロッカーをご確認ください）");
+
+      pose = new Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162/${f}` });
+      pose.setOptions({
+        modelComplexity: isMobile ? 0 : 1,
+        smoothLandmarks: true,
+        enableSegmentation: false,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      });
+      pose.onResults(onResults);
+
+      $("loadMsg").textContent = "AI（骨格認識）を準備中…";
+      mpCamera = new Camera(video, {
+        onFrame: async () => { try { await pose.send({ image: video }); } catch (e) {} },
+        facingMode: "user",
+        width: isMobile ? 480 : 640,
+        height: isMobile ? 360 : 480,
+      });
+      await mpCamera.start();
+    } catch (err) {
+      showError(err && err.name === "NotAllowedError"
+        ? "カメラの使用が許可されませんでした。ブラウザの設定でこのサイトのカメラを許可してください。"
+        : (err && err.message) || "カメラまたはAIの初期化に失敗しました。");
+    }
+  }
+  function showError(msg) {
+    const e = $("loadErr"); e.hidden = false; e.textContent = msg;
+    $("btnRetry").hidden = false;
+    $("loadMsg").textContent = "";
+  }
+  function onModelReady() {
+    resize();
+    show(scrReady); hide(scrLoad);
+  }
+
+  // =========================================================================
+  //  Game
+  // =========================================================================
+  const GS = {
+    phase: "menu",         // menu | ready | playing | over
+    score: 0, lives: 3, cleared: 0,
+    wall: null,            // { need, shown, decoy, feint, t0, dur, combo }
+    nextAt: 0,
+    particles: [],
+    shake: 0, flash: 0, flashColor: "255,255,255",
+    lastPoseName: null,
+  };
+
+  function wallDur(n) {
+    if (n <= 5) return 3.5;
+    if (n <= 15) return 2.5;
+    if (n <= 30) return 1.8;
+    return 1.2;
+  }
+  function pickPose(not) {
+    let p; do { p = POSES[(Math.random() * 4) | 0]; } while (p === not);
+    return p;
+  }
+  let comboLeft = 0;
+  function spawnWall(now) {
+    const n = GS.cleared;
+    const prev = GS.wall ? GS.wall.need : null;
+    const need = pickPose(prev);
+    let dur = wallDur(n);
+    const feintChance = n > 15 ? Math.min(0.55, (n - 15) * 0.045) : 0;
+    const feint = Math.random() < feintChance;
+    if (comboLeft <= 0 && n > 20 && Math.random() < Math.min(0.4, (n - 20) * 0.03)) comboLeft = 1 + ((Math.random() * 2) | 0);
+    let combo = false;
+    if (comboLeft > 0) { comboLeft--; combo = true; dur *= 0.82; }
+    GS.wall = {
+      need, decoy: feint ? pickPose(need) : need, feint,
+      shown: feint ? null : need,
+      t0: now, dur, combo,
+    };
+    hNeed.textContent = feint ? "？？？" : POSE_JP[need];
+  }
+
+  function resolveWall(now) {
+    const w = GS.wall;
+    const you = currentPose();
+    const ok = you === w.need;
+    if (ok) {
+      GS.cleared++;
+      const tier = w.dur <= 1.25 ? 4 : w.dur <= 1.85 ? 3 : w.dur <= 2.55 ? 2 : 1;
+      GS.score += 100 * tier + (w.combo ? 120 : 0);
+      GS.shake = Math.min(28, 16 + tier * 3);
+      GS.flash = 1; GS.flashColor = "255,255,255";
+      shatter();
+      boom();
+      flashMsg(w.combo ? "COMBO!!" : "SUCCESS!", "#ffd23f");
+      const t = wallDur(GS.cleared);
+      bpm = t <= 1.25 ? 160 : t <= 1.85 ? 150 : t <= 2.55 ? 140 : 130;
+    } else {
+      GS.lives--;
+      GS.shake = 22;
+      GS.flash = 1; GS.flashColor = "255,40,40";
+      splat();
+      flashMsg("CRASH!", "#ff4040");
+    }
+    syncHud();
+    GS.wall = null;
+    if (GS.lives <= 0) { gameOver(); return; }
+    GS.nextAt = now + (comboLeft > 0 ? 0.2 : 0.55);
+  }
+
+  function shatter() {
+    const cx = game.width / 2, cy = game.height / 2, sc = DPR;
+    for (let i = 0; i < 46; i++) {
+      const a = Math.random() * Math.PI * 2, sp = (4 + Math.random() * 12);
+      GS.particles.push({
+        x: cx + (Math.random() - 0.5) * 160 * sc, y: cy + (Math.random() - 0.5) * 160 * sc,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 3,
+        rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4,
+        s: 8 + Math.random() * 26, life: 1,
+      });
+    }
+  }
+
+  function startGame() {
+    initAudio(); if (ac.state === "suspended") ac.resume();
+    GS.phase = "playing"; GS.score = 0; GS.lives = 3; GS.cleared = 0;
+    GS.wall = null; GS.particles = []; GS.shake = 0; GS.flash = 0;
+    comboLeft = 0; bpm = 130;
+    hide(scrReady); hide(scrOver); hud.hidden = false;
+    buildLives(); syncHud();
+    startBGM();
+    GS.nextAt = performance.now() / 1000 + 1.0;
+  }
+  function gameOver() {
+    GS.phase = "over"; stopBGM();
+    $("overStat").innerHTML = `突破した壁 <b style="color:#ffd23f">${GS.cleared}</b> &nbsp;/&nbsp; SCORE <b style="color:#ffd23f">${GS.score}</b>`;
+    setTimeout(() => { hud.hidden = true; show(scrOver); }, 700);
+  }
+
+  // ---- HUD ----
+  function buildLives() {
+    hLives.innerHTML = "";
+    for (let i = 0; i < 3; i++) { const d = document.createElement("div"); d.className = "can"; hLives.appendChild(d); }
+  }
+  function syncHud() {
+    hScore.textContent = GS.score;
+    hWalls.textContent = GS.cleared;
+    [...hLives.children].forEach((c, i) => c.classList.toggle("lost", i >= GS.lives));
+  }
+  let flashTimer = null;
+  function flashMsg(txt, color) {
+    hFlash.textContent = txt; hFlash.style.color = color;
+    hFlash.classList.remove("show"); void hFlash.offsetWidth; hFlash.classList.add("show");
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => hFlash.classList.remove("show"), 700);
+  }
+
+  // =========================================================================
+  //  Rendering
+  // =========================================================================
+  let DPR = 1;
+  function resize() {
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    for (const cnv of [cam, game]) {
+      const r = cnv.getBoundingClientRect();
+      cnv.width = Math.max(2, Math.round(r.width * DPR));
+      cnv.height = Math.max(2, Math.round(r.height * DPR));
+    }
+  }
+  window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", () => setTimeout(resize, 250));
+
+  function drawCam() {
+    const cw = cam.width, ch = cam.height;
+    camCtx.save();
+    camCtx.clearRect(0, 0, cw, ch);
+    if (video.videoWidth) {
+      // cover-fit + mirror
+      const va = video.videoWidth / video.videoHeight, ca = cw / ch;
+      let dw = cw, dh = ch, dx = 0, dy = 0;
+      if (va > ca) { dh = ch; dw = ch * va; dx = (cw - dw) / 2; }
+      else { dw = cw; dh = cw / va; dy = (ch - dh) / 2; }
+      camCtx.translate(cw, 0); camCtx.scale(-1, 1);
+      camCtx.drawImage(video, dx, dy, dw, dh);
+      camCtx.restore();
+      // dark wash so overlays pop
+      camCtx.fillStyle = "rgba(6,8,14,0.32)"; camCtx.fillRect(0, 0, cw, ch);
+    } else {
+      camCtx.restore();
+      camCtx.fillStyle = "#000"; camCtx.fillRect(0, 0, cw, ch);
+    }
+
+    // skeleton overlay (mirror x to match displayed video)
+    if (landmarks) {
+      const va = video.videoWidth / video.videoHeight, ca = cw / ch;
+      let dw = cw, dh = ch, dx = 0, dy = 0;
+      if (va > ca) { dh = ch; dw = ch * va; dx = (cw - dw) / 2; }
+      else { dw = cw; dh = cw / va; dy = (ch - dh) / 2; }
+      const P = i => {
+        const l = landmarks[i];
+        return { x: cw - (dx + l.x * dw), y: dy + l.y * dh, v: vis(l) };
+      };
+      const seg = (a, b) => {
+        const p = P(a), q = P(b); if (!p.v || !q.v) return;
+        camCtx.beginPath(); camCtx.moveTo(p.x, p.y); camCtx.lineTo(q.x, q.y); camCtx.stroke();
+      };
+      camCtx.lineWidth = Math.max(4, cw * 0.012); camCtx.lineCap = "round";
+      camCtx.strokeStyle = "rgba(53,224,127,0.9)";
+      camCtx.shadowColor = "rgba(53,224,127,0.9)"; camCtx.shadowBlur = 12;
+      seg(11, 12); seg(11, 13); seg(13, 15); seg(12, 14); seg(14, 16);
+      camCtx.shadowBlur = 0;
+      for (const i of [0, 11, 12, 13, 14, 15, 16]) {
+        const p = P(i); if (!p.v) continue;
+        camCtx.fillStyle = (i >= 15) ? "#ffd23f" : "#35e07f";
+        camCtx.beginPath(); camCtx.arc(p.x, p.y, camCtx.lineWidth * 0.9, 0, 7); camCtx.fill();
+      }
+    }
+  }
+
+  function drawGame(now) {
+    const W = game.width, H = game.height;
+    gctx.setTransform(1, 0, 0, 1, 0, 0);
+    gctx.clearRect(0, 0, W, H);
+
+    // shake
+    let ox = 0, oy = 0;
+    if (GS.shake > 0.4) {
+      ox = (Math.random() - 0.5) * GS.shake * DPR;
+      oy = (Math.random() - 0.5) * GS.shake * DPR;
+      GS.shake *= 0.86;
+    } else GS.shake = 0;
+    gctx.translate(ox, oy);
+
+    const cx = W / 2, cy = H / 2;
+    const unit = Math.min(W, H);
+
+    if (GS.phase === "playing" && GS.wall) {
+      const w = GS.wall;
+      let p = (now - w.t0) / w.dur;
+      if (p >= 1) { resolveWall(now); }
+      else {
+        // decide shown pose (feint swap in the last ~28%)
+        w.shown = (w.feint && p < 0.72) ? w.decoy : w.need;
+        if (w.feint && p >= 0.72 && hNeed.textContent === "？？？") hNeed.textContent = POSE_JP[w.need];
+
+        const grow = Math.pow(p, 1.8);
+        const slabW = W * (0.16 + grow * 1.35);
+        const slabH = H * (0.16 + grow * 1.35);
+        const figS = (Math.min(slabW, slabH) / MACHO_SPAN) * 0.86;
+        const figImpact = (Math.min(W, H) * 1.51 / MACHO_SPAN) * 0.86;
+
+        // faint impact-size silhouette guide — line your body up with this
+        gctx.save(); gctx.globalAlpha = 0.12;
+        drawMacho(gctx, w.need, cx, cy, figImpact, "#ffffff");
+        gctx.restore();
+
+        // ---- the concrete slab ----
+        const sx0 = cx - slabW / 2, sy0 = cy - slabH / 2;
+        const grd = gctx.createLinearGradient(sx0, sy0, sx0 + slabW, sy0 + slabH);
+        grd.addColorStop(0, "#8a8a90"); grd.addColorStop(0.5, "#a6a6ad"); grd.addColorStop(1, "#6e6e75");
+        const bt = Math.max(10 * DPR, slabW * 0.045);
+
+        gctx.save();
+        roundRect(gctx, sx0, sy0, slabW, slabH, 16 * DPR);
+        gctx.clip();
+        // hazard stripe frame (fills whole, then centre is covered back over)
+        gctx.lineWidth = bt * 1.1;
+        for (let i = -slabH; i < slabW + slabH; i += bt * 2) {
+          gctx.strokeStyle = (((i + slabH) / (bt * 2)) | 0) % 2 ? "#141414" : "#ffd23f";
+          gctx.beginPath();
+          gctx.moveTo(sx0 + i, sy0 - 6);
+          gctx.lineTo(sx0 + i + slabH + 12, sy0 + slabH + 6);
+          gctx.stroke();
+        }
+        // concrete centre
+        roundRect(gctx, sx0 + bt, sy0 + bt, slabW - bt * 2, slabH - bt * 2, 10 * DPR);
+        gctx.fillStyle = grd; gctx.fill();
+        gctx.strokeStyle = "rgba(0,0,0,0.4)"; gctx.lineWidth = 2 * DPR; gctx.stroke();
+        // cracks on the centre
+        gctx.strokeStyle = "rgba(0,0,0,0.22)"; gctx.lineWidth = 2 * DPR;
+        for (let i = 0; i < 5; i++) {
+          gctx.beginPath();
+          let px = sx0 + (i + 0.5) / 5 * slabW, py = sy0 + bt;
+          gctx.moveTo(px, py);
+          for (let k = 0; k < 4; k++) { px += Math.sin(i * 3 + k * 1.7) * slabW * 0.11; py += (slabH - bt * 2) * 0.27; gctx.lineTo(px, py); }
+          gctx.stroke();
+        }
+        gctx.restore();
+
+        // yellow halo, then punch the person-shaped hole through to the camera
+        gctx.save(); gctx.globalAlpha = 0.92;
+        drawMacho(gctx, w.shown, cx, cy, figS * 1.09, "#ffd23f");
+        gctx.restore();
+        gctx.globalCompositeOperation = "destination-out";
+        drawMacho(gctx, w.shown, cx, cy, figS, "#000");
+        gctx.globalCompositeOperation = "source-over";
+
+        // gauge
+        hGauge.style.transform = `scaleX(${Math.max(0, 1 - p)})`;
+        hGauge.style.background = p > 0.75 ? "#ff4040" : p > 0.45 ? "#ffd23f" : "#35e07f";
+      }
+    }
+
+    // particles
+    for (const pt of GS.particles) {
+      pt.x += pt.vx * DPR; pt.y += pt.vy * DPR; pt.vy += 0.5; pt.rot += pt.vr; pt.life -= 0.018;
+    }
+    GS.particles = GS.particles.filter(p => p.life > 0 && p.y < H + 60);
+    for (const pt of GS.particles) {
+      gctx.save(); gctx.translate(pt.x, pt.y); gctx.rotate(pt.rot);
+      gctx.fillStyle = `rgba(150,150,156,${Math.max(0, pt.life)})`;
+      gctx.fillRect(-pt.s / 2 * DPR, -pt.s / 2 * DPR, pt.s * DPR, pt.s * DPR);
+      gctx.restore();
+    }
+
+    // flash
+    if (GS.flash > 0.02) {
+      gctx.fillStyle = `rgba(${GS.flashColor},${GS.flash * 0.6})`;
+      gctx.fillRect(-50, -50, W + 100, H + 100);
+      GS.flash *= 0.82;
+    }
+
+    gctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+
+  // =========================================================================
+  //  Main loop
+  // =========================================================================
+  function frame() {
+    const now = performance.now() / 1000;
+
+    // "you" indicator
+    const you = currentPose();
+    hYou.textContent = you ? POSE_JP[you] : "—";
+    const w = GS.wall;
+    hYou.className = "v " + (w && you ? (you === w.need ? "ok" : "no") : "");
+
+    if (GS.phase === "playing") {
+      if (!GS.wall && now >= GS.nextAt) spawnWall(now);
+    }
+
+    drawCam();
+    drawGame(now);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // =========================================================================
+  //  Screen helpers + buttons
+  // =========================================================================
+  function show(el) { el.hidden = false; }
+  function hide(el) { el.hidden = true; }
+
+  $("btnAllow").addEventListener("click", () => { initAudio(); boot(); });
+  $("btnRetry").addEventListener("click", boot);
+  $("btnStart").addEventListener("click", startGame);
+  $("btnAgain").addEventListener("click", () => { hide(scrOver); show(scrReady); });
+  $("btnMute").addEventListener("click", () => {
+    muted = !muted;
+    $("btnMute").innerHTML = muted ? "&#128263;" : "&#128266;";
+    if (master) master.gain.value = muted ? 0 : 0.55;
+  });
+
+  // build title macho SVGs + pose guide
+  $("menuMachos").innerHTML = svgMacho("shades") + svgMacho("can");
+  const guide = $("poseGuide");
+  const names = { OVERHEAD: "上・バンザイ", SIDE: "横・水平", LOWER: "下・腰", CROSS: "胸クロス" };
+  for (const p of POSES) {
+    const d = document.createElement("div");
+    const c = document.createElement("canvas"); c.width = 120; c.height = 120;
+    const cc = c.getContext("2d");
+    drawMacho(cc, p, 60, 66, 0.30, "#ffd23f");
+    d.innerHTML = `<img src="${c.toDataURL()}" style="width:100%;height:62px;object-fit:contain"><span>${names[p]}</span>`;
+    guide.appendChild(d);
+  }
+
+  document.addEventListener("gesturestart", e => e.preventDefault());
+  document.addEventListener("dblclick", e => e.preventDefault());
+  document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
+  resize();
+})();
+</script>
+</body>
+</html>

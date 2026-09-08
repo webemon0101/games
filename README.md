@@ -9,6 +9,7 @@
 | AETHER WARDEN | [`aether-warden/`](aether-warden/) | 縦スクロール・スペースシューター |
 | FIRE RESCUE | [`fire/`](fire/) | ゲーム＆ウオッチ風レトロLCDゲーム |
 | JUGGLE POP | [`juggle-pop/`](juggle-pop/) | 80年代レトロ液晶風ジャグリングゲーム |
+| MUSCLE ESCAPE | [`muscle-escape/`](muscle-escape/) | Webカメラ＋MediaPipe Pose のポーズアクション（要カメラ） |
 
 ## 構成
 
