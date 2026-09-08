@@ -8,6 +8,7 @@
 |---|---|---|
 | AETHER WARDEN | [`aether-warden/`](aether-warden/) | 縦スクロール・スペースシューター |
 | FIRE RESCUE | [`fire/`](fire/) | ゲーム＆ウオッチ風レトロLCDゲーム |
+| JUGGLE POP | [`juggle-pop/`](juggle-pop/) | 80年代レトロ液晶風ジャグリングゲーム |
 
 ## 構成
 

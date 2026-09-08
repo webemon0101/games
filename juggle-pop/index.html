@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-GK5QCXSGJB"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-GK5QCXSGJB');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#7fd0ba">
+<title>JUGGLE POP — LCD GAME</title>
+<meta name="google-adsense-account" content="ca-pub-8860612143084575">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
+     crossorigin="anonymous"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(circle at 50% 25%, #3b5a54, #17262b 72%);
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100dvh; padding: 10px;
+    font-family: "Courier New", ui-monospace, monospace;
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+    overflow: hidden;
+  }
+
+  /* ---- 80s toy cabinet ---- */
+  .cabinet {
+    position: relative;
+    width: min(94vw, 72vh, 430px);
+    background: linear-gradient(#b7ead9, #86d4bf 52%, #57b49c);
+    border-radius: 30px / 26px;
+    padding: 20px 18px 18px;
+    box-shadow:
+      inset 0 3px 5px rgba(255,255,255,.55),
+      inset 0 -12px 22px rgba(0,0,0,.22),
+      0 22px 45px rgba(0,0,0,.5);
+    border: 3px solid #ffd83d;
+  }
+  .brand {
+    text-align: center; margin-bottom: 12px;
+    color: #1f5c4d;
+    font: 800 22px/1 "Courier New", monospace; letter-spacing: 2px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.5);
+  }
+  .brand b { color: #e8632b; }
+  .brand small {
+    display: block; margin-top: 3px;
+    font-size: 9px; letter-spacing: 3px; color: #2b6b5b; opacity: .8;
+  }
+
+  /* top control row */
+  .toprow { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; }
+  .toprow button {
+    border: none; cursor: pointer; color: #23312a;
+    font: 700 12px/1 "Courier New", monospace; letter-spacing: 1px;
+    padding: 9px 0; border-radius: 9px; flex: 1;
+    background: linear-gradient(#fff2c0, #ffd83d);
+    box-shadow: 0 3px 0 #c99a17, inset 0 1px 1px rgba(255,255,255,.6);
+  }
+  .toprow button:active { transform: translateY(2px); box-shadow: 0 1px 0 #c99a17; }
+  .toprow button.sel { background: linear-gradient(#ffe08a, #f0a500); }
+  .toprow .snd {
+    flex: 0 0 44px; font-size: 15px; padding: 8px 0;
+    background: linear-gradient(#e7fff6, #a8e6d4);
+    box-shadow: 0 3px 0 #5aa892, inset 0 1px 1px rgba(255,255,255,.6);
+  }
+
+  /* LCD screen */
+  .bezel {
+    background: #34443c;
+    padding: 12px;
+    border-radius: 14px;
+    box-shadow: inset 0 0 0 3px #1e2823, inset 0 5px 16px rgba(0,0,0,.65);
+  }
+  canvas {
+    width: 100%; height: auto; display: block;
+    border-radius: 7px;
+    background: #b6c2a8;
+  }
+
+  /* big round hand buttons */
+  .pad { display: flex; gap: 16px; margin-top: 16px; }
+  .pad button {
+    flex: 1; height: 74px; border: none; cursor: pointer; border-radius: 50px;
+    font: 800 17px/1 "Courier New", monospace; letter-spacing: 1px;
+    color: #23312a;
+    background: radial-gradient(circle at 38% 32%, #fff3c4, #ffd83d 62%, #f0a500);
+    box-shadow: 0 6px 0 #b8860b, inset 0 2px 3px rgba(255,255,255,.6);
+    touch-action: manipulation;
+  }
+  .pad button:active { transform: translateY(4px); box-shadow: 0 2px 0 #b8860b; }
+  .pad .lbl { font-size: 11px; opacity: .7; display: block; margin-top: 2px; letter-spacing: 2px; }
+
+  .tip {
+    margin-top: 10px; text-align: center;
+    color: #1f5c4d; font: 700 10px/1.5 "Courier New", monospace; letter-spacing: 1px;
+  }
+
+  @media (orientation: landscape) and (max-height: 560px) {
+    .cabinet { width: min(64vh, 94vw, 430px); padding-top: 14px; }
+    .brand { font-size: 18px; margin-bottom: 8px; }
+    .pad button { height: 54px; }
+    .tip { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="cabinet">
+    <div class="brand">JUGGLE <b>POP</b><small>L C D &nbsp; J U G G L I N G</small></div>
+
+    <div class="toprow">
+      <button id="btnA">GAME A</button>
+      <button id="btnB">GAME B</button>
+      <button id="btnR">RESET</button>
+      <button id="btnSnd" class="snd" aria-label="sound">&#9834;</button>
+    </div>
+
+    <div class="bezel">
+      <canvas id="game" width="480" height="392"></canvas>
+    </div>
+
+    <div class="pad">
+      <button id="btnL">&#9664; LEFT<span class="lbl">LEFT HAND</span></button>
+      <button id="btnRi">RIGHT &#9654;<span class="lbl">RIGHT HAND</span></button>
+    </div>
+
+    <div class="tip">◀ / A = 左手を送る &nbsp; ▶ / D = 右手を送る &nbsp; 光るリングに手を合わせろ</div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = 480, H = 392;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+
+  const LCD_BG = "#b6c2a8";
+  const INK    = "#242f27";
+  const GHOST  = "rgba(36,47,39,0.12)";
+  const TRAIL  = "rgba(36,47,39,0.26)";
+
+  // ---------------------------------------------------------------------------
+  //  Geometry — a 6-station juggling loop (cascade shape).
+  //   S0 = RIGHT hand catch   S3 = LEFT hand catch   others = air
+  //   loop order: S0 -> S1 -> S2 -> S3 -> S4 -> S5 -> S0
+  // ---------------------------------------------------------------------------
+  const STATIONS = [
+    { x: 388, y: 284 },  // 0  RIGHT hand
+    { x: 332, y: 170 },  // 1  air (R->L, rising)
+    { x: 182, y: 124 },  // 2  air (R->L, over the top, just before L)
+    { x: 92,  y: 284 },  // 3  LEFT hand
+    { x: 150, y: 170 },  // 4  air (L->R, rising)
+    { x: 300, y: 124 },  // 5  air (L->R, over the top, just before R)
+  ];
+  const R_LANES = [ { x: 416, y: 306 }, { x: 388, y: 284 }, { x: 356, y: 258 } ];
+  const L_LANES = [ { x: 64,  y: 306 }, { x: 92,  y: 284 }, { x: 124, y: 258 } ];
+  const CATCH = { 0: "R", 3: "L" };
+  const LS = { x: 222, y: 300 }, RS = { x: 258, y: 300 };   // shoulders
+
+  const mix = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+
+  function ballAt(station, lane) {
+    switch (station) {
+      case 0: return R_LANES[lane];
+      case 3: return L_LANES[lane];
+      case 2: return mix(STATIONS[2], L_LANES[lane], 0.48);
+      case 5: return mix(STATIONS[5], R_LANES[lane], 0.48);
+      case 1: return mix(STATIONS[1], L_LANES[lane], 0.22);
+      case 4: return mix(STATIONS[4], R_LANES[lane], 0.22);
+      default: return STATIONS[station];
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Audio — Web Audio API, all tones generated
+  // ---------------------------------------------------------------------------
+  let audioCtx = null, muted = false;
+  function ac() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, dur, type = "square", vol = 0.14, slideTo = null) {
+    if (muted) return;
+    const c = ac(), t0 = c.currentTime;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  const sndMove  = () => tone(520, 0.04, "square", 0.09);
+  const sndTick  = () => tone(1200 + Math.max(0, (0.5 - beatDur())) * 1400, 0.015, "square", 0.03);
+  const sndCatch = () => { tone(720, 0.05, "square", 0.12); setTimeout(() => tone(1040, 0.06, "square", 0.12), 42); };
+  const sndMiss  = () => tone(210, 0.4, "sawtooth", 0.2, 60);
+  const sndOver  = () => [520, 392, 300, 208].forEach((f, i) => setTimeout(() => tone(f, 0.22, "square", 0.15), i * 165));
+  const sndStart = () => { tone(600, 0.06, "square", 0.11); setTimeout(() => tone(920, 0.09, "square", 0.11), 55); };
+
+  // ---------------------------------------------------------------------------
+  //  State
+  // ---------------------------------------------------------------------------
+  let state = "title";           // title | playing | gameover
+  let mode  = "A";
+  let score = 0;
+  let hiA = +(localStorage.getItem("jugglepop_hiA") || 0);
+  let hiB = +(localStorage.getItem("jugglepop_hiB") || 0);
+  let leftHand = 1, rightHand = 1;
+  let balls = [];
+  let beatT = 0, beatCount = 0, beatFlash = 0;
+  let leftFlash = 0, rightFlash = 0;
+  let time = 0;
+
+  function speedStage() {
+    const startThresh = mode === "B" ? 50 : 5;
+    if (score <= startThresh) return 0;
+    return Math.floor(score / 100) * 3 + Math.floor((score % 100) / 20);
+  }
+  function beatDur() {
+    if (state !== "playing") return 0.5;
+    return Math.max(0.14, 0.60 - speedStage() * 0.035);
+  }
+  function addScore(n) {
+    score += n;
+    const cap = mode === "B" ? 9900 : 10000;
+    if (score >= cap) score -= cap;
+  }
+
+  function makeBalls(list) {
+    return list.map(st => ({ station: st, prev: st, lane: 1, flash: 0, dropped: false, dropAt: 0 }));
+  }
+  function enterTitle() {
+    state = "title";
+    mode = "A";
+    balls = makeBalls([1, 2, 4]);
+    leftHand = rightHand = 1;
+    beatCount = 0; beatT = 0.5;
+  }
+  function startGame(m) {
+    ac(); sndStart();
+    mode = m; score = 0;
+    leftHand = rightHand = 1;
+    balls = makeBalls(m === "A" ? [1, 4] : [1, 2, 4]);
+    beatCount = 0; beatT = 0.45;
+    state = "playing";
+    refreshModeButtons();
+  }
+  function gameOver() {
+    if (state !== "playing") return;
+    state = "gameover";
+    if (mode === "B") { if (score > hiB) { hiB = score; localStorage.setItem("jugglepop_hiB", hiB); } }
+    else             { if (score > hiA) { hiA = score; localStorage.setItem("jugglepop_hiA", hiA); } }
+    sndOver();
+  }
+
+  function cycleLeft()  { if (state !== "playing") return; leftHand  = (leftHand  + 1) % 3; leftFlash = 1;  sndMove(); }
+  function cycleRight() { if (state !== "playing") return; rightHand = (rightHand + 1) % 3; rightFlash = 1; sndMove(); }
+
+  // ---------------------------------------------------------------------------
+  //  Beat — every ball steps one station; catches resolve on arrival
+  // ---------------------------------------------------------------------------
+  function onBeat() {
+    beatCount++;
+    beatFlash = 1;
+    sndTick();
+
+    for (const b of balls) {
+      if (b.dropped) continue;
+      b.prev = b.station;
+      b.station = (b.station + 1) % 6;
+    }
+    // first few beats: balls settle into the pattern — no score, no miss
+    if (state === "title" || beatCount < 4) return;
+
+    for (const b of balls) {
+      if (b.dropped) continue;
+      const side = CATCH[b.station];
+      if (!side) continue;
+      const hand = side === "R" ? rightHand : leftHand;
+      if (hand === b.lane) {
+        addScore(mode === "B" ? 10 : 1);
+        b.lane = (b.lane + 1) % 3;
+        b.flash = 1;
+        if (side === "R") rightFlash = 1; else leftFlash = 1;
+        sndCatch();
+      } else {
+        b.dropped = true;
+        b.dropAt = time;
+        sndMiss();
+        gameOver();
+      }
+    }
+  }
+
+  function update(dt) {
+    beatFlash = Math.max(0, beatFlash - dt * 4);
+    leftFlash = Math.max(0, leftFlash - dt * 5);
+    rightFlash = Math.max(0, rightFlash - dt * 5);
+    for (const b of balls) b.flash = Math.max(0, b.flash - dt * 3);
+
+    if (state === "playing" || state === "title") {
+      beatT -= dt;
+      if (beatT <= 0) { beatT += beatDur(); onBeat(); }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //  7-segment number rendering
+  // ---------------------------------------------------------------------------
+  const SEGMAP = {
+    0: "abcdef", 1: "bc", 2: "abged", 3: "abgcd", 4: "fgbc",
+    5: "afgcd", 6: "afgecd", 7: "abc", 8: "abcdefg", 9: "abcdfg",
+  };
+  function drawDigit(x, y, w, h, d, on, off) {
+    const t = Math.max(2, w * 0.17);
+    const segs = {
+      a: [x + t, y, w - 2 * t, t],
+      g: [x + t, y + h / 2 - t / 2, w - 2 * t, t],
+      d: [x + t, y + h - t, w - 2 * t, t],
+      f: [x, y + t, t, h / 2 - 1.5 * t],
+      b: [x + w - t, y + t, t, h / 2 - 1.5 * t],
+      e: [x, y + h / 2 + 0.5 * t, t, h / 2 - 1.5 * t],
+      c: [x + w - t, y + h / 2 + 0.5 * t, t, h / 2 - 1.5 * t],
+    };
+    const active = d == null ? "" : SEGMAP[d];
+    for (const k in segs) {
+      ctx.fillStyle = active.indexOf(k) >= 0 ? on : off;
+      const s = segs[k];
+      ctx.fillRect(s[0], s[1], s[2], s[3]);
+    }
+  }
+  function drawNumber(left, y, w, h, value, digits, on, off) {
+    const str = String(Math.max(0, Math.floor(value))).padStart(digits, " ");
+    const gap = Math.max(3, w * 0.3);
+    for (let i = 0; i < digits; i++) {
+      const c = str[i];
+      drawDigit(left + i * (w + gap), y, w, h, c === " " ? null : +c, on, off);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Scene drawing
+  // ---------------------------------------------------------------------------
+  function dot(p, r) { ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fill(); }
+
+  function drawJuggler() {
+    // legs + shoes
+    ctx.fillStyle = INK;
+    ctx.fillRect(230, 332, 8, 22);
+    ctx.fillRect(244, 332, 8, 22);
+    ctx.fillRect(222, 352, 18, 6);
+    ctx.fillRect(240, 352, 18, 6);
+    // body (puffy)
+    ctx.beginPath();
+    ctx.moveTo(222, 334); ctx.lineTo(258, 334); ctx.lineTo(266, 300); ctx.lineTo(214, 300);
+    ctx.closePath(); ctx.fill();
+    // ruffle collar
+    ctx.beginPath();
+    ctx.moveTo(210, 300); ctx.lineTo(270, 300); ctx.lineTo(252, 312); ctx.lineTo(228, 312);
+    ctx.closePath(); ctx.fill();
+    // head
+    dot({ x: 240, y: 276 }, 15);
+    // cone hat
+    ctx.beginPath();
+    ctx.moveTo(224, 268); ctx.lineTo(256, 268); ctx.lineTo(240, 228);
+    ctx.closePath(); ctx.fill();
+    dot({ x: 240, y: 226 }, 4);
+    // nose (negative space)
+    ctx.fillStyle = LCD_BG; dot({ x: 240, y: 280 }, 4.5);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(240, 280, 4.5, 0, 7); ctx.stroke();
+  }
+
+  function drawArm(sh, hand, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 6; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(sh.x, sh.y); ctx.lineTo(hand.x, hand.y); ctx.stroke();
+    ctx.fillStyle = color; dot(hand, 6.5);
+    ctx.lineCap = "butt";
+  }
+
+  function drawArms() {
+    for (let i = 0; i < 3; i++) if (i !== leftHand)  drawArm(LS, L_LANES[i], GHOST);
+    for (let i = 0; i < 3; i++) if (i !== rightHand) drawArm(RS, R_LANES[i], GHOST);
+    drawArm(LS, L_LANES[leftHand], INK);
+    drawArm(RS, R_LANES[rightHand], INK);
+    if (leftFlash > 0)  { ctx.fillStyle = INK; dot(L_LANES[leftHand], 6.5 + leftFlash * 5); }
+    if (rightFlash > 0) { ctx.fillStyle = INK; dot(R_LANES[rightHand], 6.5 + rightFlash * 5); }
+  }
+
+  // bright ring on the lane an incoming ball will drop into — "catch here"
+  function drawTargets() {
+    for (const b of balls) {
+      if (b.dropped) continue;
+      let p = null, near = false;
+      if (b.station === 1 || b.station === 2) { p = L_LANES[b.lane]; near = b.station === 2; }
+      else if (b.station === 4 || b.station === 5) { p = R_LANES[b.lane]; near = b.station === 5; }
+      if (!p) continue;
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = near ? 3 : 2;
+      ctx.globalAlpha = near ? 0.95 : 0.4;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 13, 0, 7); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawBalls() {
+    // ghost of every possible ball position
+    ctx.fillStyle = GHOST;
+    for (let s = 0; s < 6; s++) {
+      if (s === 0 || s === 3) for (let l = 0; l < 3; l++) dot(ballAt(s, l), 7);
+      else dot(STATIONS[s], 7);
+    }
+    for (const b of balls) {
+      const p = ballAt(b.station, b.lane);
+      if (b.dropped) {
+        const y = Math.min(H + 20, p.y + (time - b.dropAt) * 320);
+        ctx.fillStyle = INK; dot({ x: p.x, y }, 8);
+        continue;
+      }
+      ctx.fillStyle = TRAIL; dot(ballAt(b.prev, b.lane), 7);   // LCD ghost trail
+      ctx.fillStyle = INK; dot(p, 8 + b.flash * 3);
+    }
+  }
+
+  function drawHUD() {
+    ctx.fillStyle = INK;
+    ctx.textBaseline = "alphabetic";
+
+    drawNumber(14, 10, 16, 30, score, 4, INK, GHOST);
+
+    // mode badge
+    ctx.fillStyle = INK;
+    ctx.font = "bold 13px 'Courier New', monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("GAME", 116, 20);
+    ctx.font = "bold 22px 'Courier New', monospace";
+    ctx.fillText(mode, 128, 42);
+
+    // speed gauge
+    const stg = Math.min(12, speedStage());
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = i < stg ? INK : GHOST;
+      ctx.fillRect(168 + i * 12, 16, 8, 16);
+    }
+    ctx.fillStyle = GHOST;
+    ctx.font = "bold 9px 'Courier New', monospace";
+    ctx.fillText("SPEED", 168, 44);
+
+    // hi score
+    ctx.fillStyle = INK;
+    ctx.font = "bold 12px 'Courier New', monospace";
+    ctx.fillText("HI", 330, 22);
+    drawNumber(352, 12, 11, 20, mode === "B" ? hiB : hiA, 4, INK, GHOST);
+
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(10, 50); ctx.lineTo(W - 10, 50); ctx.stroke();
+  }
+
+  function render() {
+    ctx.fillStyle = LCD_BG;
+    ctx.fillRect(0, 0, W, H);
+
+    drawHUD();
+
+    // faint loop guide
+    ctx.strokeStyle = GHOST; ctx.lineWidth = 2; ctx.setLineDash([2, 6]);
+    ctx.beginPath();
+    for (let k = 0; k <= 48; k++) {
+      const s = (k / 48) * 6;
+      const i = Math.floor(s) % 6, f = s - Math.floor(s);
+      const a = ballAt(i, 1), b = ballAt((i + 1) % 6, 1);
+      const x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f;
+      k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+
+    drawJuggler();
+    drawArms();
+    drawTargets();
+    drawBalls();
+
+    // vignette
+    const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.82);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(20,30,15,0.20)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    if (state !== "playing") {
+      ctx.fillStyle = "rgba(182,194,168,0.88)";
+      ctx.fillRect(46, 92, W - 92, 210);
+      ctx.strokeStyle = INK; ctx.lineWidth = 3;
+      ctx.strokeRect(46, 92, W - 92, 210);
+
+      ctx.fillStyle = INK; ctx.textAlign = "center";
+      const blink = Math.floor(time * 2) % 2 === 0;
+
+      if (state === "title") {
+        ctx.font = "bold 34px 'Courier New', monospace";
+        ctx.fillText("JUGGLE POP", W / 2, 145);
+        ctx.font = "bold 13px 'Courier New', monospace";
+        ctx.fillText("ピエロのお手玉を1個も落とさず受け続けろ", W / 2, 176);
+        ctx.fillText("光るリングの位置に ◀左手 ▶右手 を合わせる", W / 2, 196);
+        ctx.fillText("A=ボール2個/1点   B=ボール3個/10点", W / 2, 216);
+        if (blink) {
+          ctx.font = "bold 16px 'Courier New', monospace";
+          ctx.fillText("GAME A / GAME B を押してスタート", W / 2, 258);
+        }
+      } else {
+        ctx.font = "bold 34px 'Courier New', monospace";
+        ctx.fillText("GAME OVER", W / 2, 142);
+        ctx.font = "bold 16px 'Courier New', monospace";
+        ctx.fillText("GAME " + mode + "    " + score + " pts", W / 2, 178);
+        ctx.fillText("HI  " + (mode === "B" ? hiB : hiA), W / 2, 202);
+        if (blink) {
+          ctx.font = "bold 15px 'Courier New', monospace";
+          ctx.fillText("GAME A / GAME B でもう一度", W / 2, 250);
+        }
+      }
+      ctx.textAlign = "left";
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Loop
+  // ---------------------------------------------------------------------------
+  let last = 0;
+  function loop(ts) {
+    const dt = Math.min(0.05, (ts - last) / 1000 || 0);
+    last = ts;
+    time += dt;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------------------------------------------------------------------------
+  //  Input
+  // ---------------------------------------------------------------------------
+  const btnA = document.getElementById("btnA");
+  const btnB = document.getElementById("btnB");
+  const btnR = document.getElementById("btnR");
+  const btnL = document.getElementById("btnL");
+  const btnRi = document.getElementById("btnRi");
+  const btnSnd = document.getElementById("btnSnd");
+
+  function refreshModeButtons() {
+    btnA.classList.toggle("sel", state === "playing" && mode === "A");
+    btnB.classList.toggle("sel", state === "playing" && mode === "B");
+  }
+
+  const tap = (el, fn) => {
+    el.addEventListener("pointerdown", e => { e.preventDefault(); fn(); });
+  };
+  tap(btnA, () => startGame("A"));
+  tap(btnB, () => startGame("B"));
+  tap(btnR, () => { enterTitle(); refreshModeButtons(); });
+  tap(btnL, cycleLeft);
+  tap(btnRi, cycleRight);
+  function toggleSound() {
+    muted = !muted;
+    btnSnd.innerHTML = muted ? "&#128263;" : "&#9834;";
+    if (!muted) ac();
+  }
+  tap(btnSnd, toggleSound);
+
+  window.addEventListener("keydown", e => {
+    const k = e.key.toLowerCase();
+    if (["arrowleft", "arrowright", "a", "d", " "].includes(k)) e.preventDefault();
+    if (k === "arrowleft" || k === "a") cycleLeft();
+    else if (k === "arrowright" || k === "d") cycleRight();
+    else if (k === "1") startGame("A");
+    else if (k === "2") startGame("B");
+    else if (k === " " && state !== "playing") startGame("A");
+    else if (k === "m") toggleSound();
+  });
+
+  ["pointerdown", "keydown", "touchstart"].forEach(ev =>
+    window.addEventListener(ev, () => { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); }, { passive: true }));
+
+  document.addEventListener("gesturestart", e => e.preventDefault());
+  document.addEventListener("dblclick", e => e.preventDefault());
+  document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
+  enterTitle();
+})();
+</script>
+</body>
+</html>
