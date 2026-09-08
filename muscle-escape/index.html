@@ -17,8 +17,8 @@
 <meta name="google-adsense-account" content="ca-pub-8860612143084575">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
      crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162/pose.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
 <style>
   * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; }
@@ -31,7 +31,7 @@
   #stage { position: absolute; inset: 0; }
   #game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 2; }
 
-  #cam-video { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+  #cam-video { position: absolute; left: -10000px; top: 0; width: 320px; height: 240px; pointer-events: none; }
   #cam {
     position: absolute; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom));
     width: clamp(116px, 30vw, 188px); aspect-ratio: 4/3; z-index: 4;
@@ -138,7 +138,7 @@
 <body>
 <div id="app">
   <div id="stage">
-    <video id="cam-video" playsinline muted></video>
+    <video id="cam-video" playsinline muted autoplay></video>
     <canvas id="game"></canvas>
   </div>
   <canvas id="cam"></canvas>
@@ -197,6 +197,17 @@
 <script>
 (() => {
   "use strict";
+
+  // ---- visible error banner (so failures aren't silent) ----
+  const errbar = document.createElement("div");
+  errbar.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:999;background:#c1121f;color:#fff;" +
+    "font:12px/1.45 system-ui,sans-serif;padding:8px 12px;white-space:pre-wrap;display:none;max-height:40vh;overflow:auto";
+  document.body.appendChild(errbar);
+  let shownErr = false;
+  function fatal(m) { shownErr = true; errbar.style.display = "block"; errbar.textContent = "⚠ " + m; }
+  window.addEventListener("error", e => { if (!shownErr) fatal((e.message || e.error || "script error") + "  @" + String(e.filename || "").split("/").pop() + ":" + e.lineno); });
+  window.addEventListener("unhandledrejection", e => { if (!shownErr) fatal("promise: " + (e.reason && (e.reason.message || e.reason))); });
+
   const $ = id => document.getElementById(id);
   const video = $("cam-video");
   const cam = $("cam"), camCtx = cam.getContext("2d");
@@ -395,23 +406,42 @@
     poseHist.push(classify(landmarks)); if (poseHist.length > 7) poseHist.shift();
     if (!mpReady) { mpReady = true; clearTimeout(loadTO); resize(); GS.phase = "ready"; show(scrReady); hide(scrLoad); }
   }
+  let camFrames = 0;
   async function boot() {
     show(scrLoad); hide(scrMenu); $("loadErr").hidden = true; $("btnRetry").hidden = true;
-    $("loadMsg").textContent = "カメラを起動中…";
+    camFrames = 0;
+    $("loadMsg").textContent = "カメラの許可を待っています…";
     clearTimeout(loadTO);
-    loadTO = setTimeout(() => { if (!mpReady) showError("AIモデルの読み込みに時間がかかっています。通信環境を確認して、もう一度お試しください。"); }, 25000);
+    loadTO = setTimeout(() => {
+      if (!mpReady) showError(camFrames > 3
+        ? "カメラは動作していますが、AIモデルの読み込みが終わりません。通信環境／広告ブロッカーをご確認のうえ、もう一度お試しください。"
+        : "カメラを取得できませんでした。ブラウザのカメラ許可設定と、他アプリがカメラを使っていないかご確認ください。");
+    }, 20000);
     try {
-      if (typeof Pose === "undefined" || typeof Camera === "undefined")
-        throw new Error("MediaPipe の読み込みに失敗しました（ネットワーク／広告ブロッカーをご確認ください）");
-      pose = new Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162/${f}` });
+      if (typeof Pose === "undefined") throw new Error("MediaPipe(pose) を読み込めません。広告ブロッカー/ネットワークをご確認ください。");
+      if (typeof Camera === "undefined") throw new Error("MediaPipe(camera_utils) を読み込めません。広告ブロッカー/ネットワークをご確認ください。");
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("このブラウザ/接続ではカメラを使用できません（HTTPS必須）。");
+
+      pose = new Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${f}` });
       pose.setOptions({ modelComplexity: isMobile ? 0 : 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
       pose.onResults(onResults);
-      $("loadMsg").textContent = "AI（骨格認識）を準備中…";
-      mpCamera = new Camera(video, { onFrame: async () => { try { await pose.send({ image: video }); } catch (e) {} }, facingMode: "user", width: isMobile ? 480 : 640, height: isMobile ? 360 : 480 });
+
+      mpCamera = new Camera(video, {
+        onFrame: async () => {
+          camFrames++;
+          if (camFrames === 1) $("loadMsg").textContent = "AIモデルを読み込み中…（初回は数十秒かかります）";
+          try { await pose.send({ image: video }); } catch (e) {}
+        },
+        facingMode: "user", width: isMobile ? 480 : 640, height: isMobile ? 360 : 480,
+      });
       await mpCamera.start();
+      $("loadMsg").textContent = "カメラOK。AIモデルを読み込み中…";
     } catch (err) {
-      showError(err && err.name === "NotAllowedError"
-        ? "カメラの使用が許可されませんでした。ブラウザ設定でこのサイトのカメラを許可してください。"
+      const n = err && err.name;
+      showError(n === "NotAllowedError" || n === "SecurityError"
+        ? "カメラの使用が許可されませんでした。アドレスバーのカメラアイコンから「許可」に変更して、もう一度お試しください。"
+        : n === "NotFoundError" || n === "DevicesNotFoundError" ? "カメラが見つかりませんでした。"
+        : n === "NotReadableError" || n === "TrackStartError" ? "カメラを他のアプリが使用中です。閉じてからお試しください。"
         : (err && err.message) || "カメラまたはAIの初期化に失敗しました。");
     }
   }
@@ -756,15 +786,19 @@
   // =====================================================================
   //  Loop
   // =====================================================================
-  let last = 0;
+  let last = 0, frameErr = false;
   function frame(ts) {
-    const now = ts / 1000;
-    const dt = Math.min(0.05, (now - last) || 0); last = now;
-    update(dt, now);
-    drawScene(now);
-    drawCam();
-    updateTurnUI(now);
     requestAnimationFrame(frame);
+    try {
+      const now = ts / 1000;
+      const dt = Math.min(0.05, (now - last) || 0); last = now;
+      update(dt, now);
+      drawScene(now);
+      drawCam();
+      updateTurnUI(now);
+    } catch (err) {
+      if (!frameErr) { frameErr = true; fatal("render: " + (err && (err.message || err)) + "\n" + String(err && err.stack || "").split("\n").slice(1, 3).join("\n")); }
+    }
   }
   requestAnimationFrame(frame);
 
@@ -784,7 +818,7 @@
   });
 
   // menu marching row + pose guide
-  (function buildMenu() {
+  try { (function buildMenu() {
     const row = $("menuRow");
     for (let i = 0; i < 3; i++) {
       const c = document.createElement("canvas"); c.width = 120; c.height = 180;
@@ -800,7 +834,7 @@
       d.innerHTML = `<img src="${c.toDataURL()}"><span>${names[pn]}</span>`;
       guide.appendChild(d);
     }
-  })();
+  })(); } catch (err) { fatal("menu build: " + (err && (err.message || err))); }
 
   document.addEventListener("gesturestart", e => e.preventDefault());
   document.addEventListener("dblclick", e => e.preventDefault());
