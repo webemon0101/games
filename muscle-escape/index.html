@@ -17,8 +17,15 @@
 <meta name="google-adsense-account" content="ca-pub-8860612143084575">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
      crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
+<!-- MediaPipe loaded on demand from initCamera() (see script below) -->
+<script>
+  window.addEventListener("error", function (e) {
+    try {
+      var v = document.getElementById("ver");
+      if (v) { v.style.color = "#ff5252"; v.style.opacity = 1; v.textContent = "ERR: " + (e.message || e.error) + " @" + (e.lineno || "?"); }
+    } catch (x) {}
+  });
+</script>
 <style>
   * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; }
@@ -886,6 +893,15 @@
 
   resize();
 })();
+</script>
+<script>
+  (function () {
+    var v = document.getElementById("ver");
+    if (v && v.textContent.indexOf("✓") === -1 && v.textContent.indexOf("ERR") === -1) {
+      v.style.color = "#ffb020"; v.style.opacity = 1;
+      v.textContent = "build v4 — ゲームscriptが実行されていません";
+    }
+  })();
 </script>
 </body>
 </html>
