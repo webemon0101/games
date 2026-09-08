@@ -117,8 +117,12 @@
   .bigbtn:active { transform: translateY(5px); box-shadow: 0 3px 0 #a56b00; }
   .bigbtn.sm { font-size: clamp(13px, 3.6vw, 17px); padding: 12px 22px; box-shadow: 0 5px 0 #a56b00; }
   .hint { font-family: system-ui, sans-serif; font-size: 12px; color: #8a8a8a; }
-  .machos { display: flex; gap: 10px; }
-  .machos svg { width: clamp(70px, 22vw, 120px); height: auto; }
+  .machos { display: flex; gap: 6px; align-items: flex-end; }
+  .machos svg { width: clamp(84px, 26vw, 140px); height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+  .machos svg:nth-child(1) { animation: flexL 0.5s ease-in-out infinite alternate; }
+  .machos svg:nth-child(2) { animation: flexR 0.6s ease-in-out infinite alternate; }
+  @keyframes flexL { from { transform: rotate(-3deg) scale(1, 1); } to { transform: rotate(2deg) scale(1.05, .96); } }
+  @keyframes flexR { from { transform: rotate(3deg) scale(1, 1); } to { transform: rotate(-2deg) scale(1.06, .95); } }
   .load { font-family: system-ui, sans-serif; font-weight: 700; color: #ffd23f; letter-spacing: 1px; }
   .spin { width: 44px; height: 44px; border: 5px solid rgba(255,255,255,.2); border-top-color: #ffd23f;
     border-radius: 50%; animation: sp 0.9s linear infinite; }
@@ -267,50 +271,101 @@
     o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
   }
 
-  // --- BGM: driving synth-bass riff, tempo scales with difficulty ---
-  let bgmOn = false, bgmStep = 0, bgmNext = 0, bgmTimer = null, bpm = 130;
-  const RIFF = [0, 0, 7, 0, 10, 7, 5, 3];   // semitone offsets from root
-  function kick(t) {
+  // --- BGM: dumb driving gym-rock loop. bass riff + kick/snare/hats,
+  //     plus a bright square lead once the game is running. tempo = bpm. ---
+  let bgmOn = false, bgmMode = "menu", bgmStep = 0, bgmBar = 0, bgmNext = 0, bgmTimer = null, bpm = 130;
+  const RIFF = [0, 0, 12, 0, 7, 0, 10, 8];          // bass, 16 steps (2 bars) below
+  const RIFF2 = [3, 3, 15, 3, 10, 3, 8, 7];
+  const LEAD = [-1, 12, 15, 19, 15, 12, 19, 22, -1, 10, 14, 17, 22, 19, 17, 14];  // -1 = rest
+
+  function kick(t, v = 0.55) {
     const o = ac.createOscillator(), g = ac.createGain();
-    o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
-    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.18);
+    o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.12);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.19);
   }
-  function hat(t) {
-    const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.04);
-    const f = ac.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 7000;
-    const g = ac.createGain(); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + 0.05);
+  function snare(t) {
+    const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.2);
+    const f = ac.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 1500;
+    const g = ac.createGain(); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    const o = ac.createOscillator(), og = ac.createGain();
+    o.type = "triangle"; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.1);
+    og.gain.setValueAtTime(0.18, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    s.connect(f); f.connect(g); g.connect(master); o.connect(og); og.connect(master);
+    s.start(t); s.stop(t + 0.2); o.start(t); o.stop(t + 0.13);
   }
-  function bassNote(t, step) {
+  function hat(t, open) {
+    const s = ac.createBufferSource(); s.buffer = noiseBuffer(open ? 0.12 : 0.04);
+    const f = ac.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 8000;
+    const g = ac.createGain(); g.gain.setValueAtTime(open ? 0.1 : 0.14, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.12 : 0.045));
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + 0.14);
+  }
+  function bass(t, semi, dur) {
     const root = 41.2; // E1
-    const f = root * Math.pow(2, RIFF[step] / 12);
+    const f = root * Math.pow(2, semi / 12);
     const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), flt = ac.createBiquadFilter();
-    o.type = "sawtooth"; o2.type = "square"; o.frequency.value = f; o2.frequency.value = f * 2;
-    flt.type = "lowpass"; flt.frequency.value = 380 + (bpm - 130) * 26; flt.Q.value = 8;
+    o.type = "sawtooth"; o2.type = "square"; o.frequency.value = f; o2.frequency.value = f * 1.005 * 2;
+    flt.type = "lowpass"; flt.frequency.value = 340 + (bpm - 110) * 24; flt.Q.value = 9;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.26, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+    g.gain.exponentialRampToValueAtTime(0.3, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(flt); o2.connect(flt); flt.connect(g); g.connect(master);
-    o.start(t); o2.start(t); o.stop(t + 0.17); o2.stop(t + 0.17);
-    if (step % 4 === 0) kick(t);
-    if (step % 2 === 1) hat(t);
+    o.start(t); o2.start(t); o.stop(t + dur + 0.02); o2.stop(t + dur + 0.02);
+  }
+  function lead(t, semi) {
+    const f = 41.2 * Math.pow(2, (semi + 24) / 12);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "square"; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.11, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.18);
   }
   function bgmTick() {
     if (!bgmOn) return;
-    const spb = (60 / bpm) / 2;               // eighth notes
-    while (bgmNext < ac.currentTime + 0.12) {
-      if (!muted) bassNote(bgmNext, bgmStep);
-      bgmNext += spb; bgmStep = (bgmStep + 1) % 8;
+    const spb = (60 / bpm) / 4;                        // 16th notes
+    if (bgmNext < ac.currentTime - 0.4) bgmNext = ac.currentTime + 0.06;   // resync after tab throttle
+    while (bgmNext < ac.currentTime + 0.14) {
+      if (!muted) {
+        const play = bgmMode === "play";
+        const s16 = bgmStep, s8 = s16 >> 1, bar2 = (bgmBar % 2);
+        // bass on every 8th
+        if (s16 % 2 === 0) {
+          const seq = bar2 ? RIFF2 : RIFF;
+          bass(bgmNext, seq[s8 % 8], play ? 0.16 : 0.2);
+        }
+        // drums
+        if (s16 % 4 === 0) kick(bgmNext, play ? 0.6 : 0.4);
+        if (play && s16 === 6) kick(bgmNext, 0.4);
+        if (play && (s16 === 4 || s16 === 12)) snare(bgmNext);
+        if (s16 % 2 === 1) hat(bgmNext, play && s16 === 7);
+        // lead (only in-game)
+        if (play) {
+          const n = LEAD[(s16 + bar2 * 16) % LEAD.length];
+          if (n >= 0 && s16 % 2 === 0) lead(bgmNext, bar2 ? RIFF2[0] + n : n);
+        }
+      }
+      bgmNext += spb;
+      bgmStep = (bgmStep + 1) % 16;
+      if (bgmStep === 0) bgmBar++;
     }
     bgmTimer = setTimeout(bgmTick, 25);
   }
-  function startBGM() { if (!ac || bgmOn) return; bgmOn = true; bgmStep = 0; bgmNext = ac.currentTime + 0.05; bgmTick(); }
+  function startBGM(mode) {
+    bgmMode = mode || "menu";
+    if (!ac || bgmOn) return;
+    bgmOn = true; bgmStep = 0; bgmBar = 0; bgmNext = ac.currentTime + 0.06; bgmTick();
+  }
+  function setBgmMode(mode) { bgmMode = mode; }
   function stopBGM() { bgmOn = false; clearTimeout(bgmTimer); }
 
   // =========================================================================
   //  Comical macho silhouettes  (canvas paths — used as wall cut-outs + icons)
   // =========================================================================
+  // absurdly buff cartoon body — tiny head, boulder shoulders, wasp waist,
+  // little legs. drawn as a blob of thick strokes + discs so it still reads
+  // as a clean per-pose silhouette when punched out of a wall.
   function drawMacho(c, pose, cx, cy, s, color) {
     c.save();
     c.lineCap = "round"; c.lineJoin = "round";
@@ -318,44 +373,88 @@
     const P = (x, y) => ({ x: cx + x * s, y: cy + y * s });
     const line = (a, b, w) => { c.lineWidth = w * s; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); };
     const disc = (p, r) => { c.beginPath(); c.arc(p.x, p.y, r * s, 0, 7); c.fill(); };
+    const mid = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
 
-    // head + neck
-    disc(P(0, -74), 24);
-    line(P(0, -52), P(0, -34), 24);
-    // torso V
-    const shL = P(-54, -34), shR = P(54, -34), wL = P(-22, 56), wR = P(22, 56);
+    // teeny legs
+    line(P(-14, 40), P(-20, 118), 30); line(P(14, 40), P(20, 118), 30);
+    disc(P(-24, 122), 13); disc(P(24, 122), 13);
+    // wasp-waist V torso
+    const shL = P(-64, -30), shR = P(64, -30), wL = P(-16, 52), wR = P(16, 52);
     c.beginPath(); c.moveTo(shL.x, shL.y); c.lineTo(shR.x, shR.y); c.lineTo(wR.x, wR.y); c.lineTo(wL.x, wL.y); c.closePath(); c.fill();
-    // legs
-    line(P(-20, 52), P(-26, 152), 30); line(P(20, 52), P(26, 152), 30);
-    disc(P(-30, 156), 12); disc(P(30, 156), 12);
-    // arms
-    const arm = (sh, el, ha) => { line(sh, el, 30); line(el, ha, 26); disc(ha, 15); };
-    if (pose === "OVERHEAD") { arm(shL, P(-60, -74), P(-30, -156)); arm(shR, P(60, -74), P(30, -156)); }
-    else if (pose === "SIDE") { arm(shL, P(-98, -40), P(-156, -38)); arm(shR, P(98, -40), P(156, -38)); }
-    else if (pose === "LOWER") { arm(shL, P(-96, 6), P(-42, 62)); arm(shR, P(96, 6), P(42, 62)); }
-    else if (pose === "CROSS") { arm(shL, P(-42, -8), P(48, 28)); arm(shR, P(42, -8), P(-48, 28)); }
+    // slab pecs
+    disc(P(-24, -6), 20); disc(P(24, -6), 20);
+    // boulder traps + delts
+    disc(P(-30, -44), 20); disc(P(30, -44), 20);
+    disc(P(-60, -28), 27); disc(P(60, -28), 27);
+    // tiny head, sunk between the traps
+    disc(P(0, -66), 17);
+    line(P(0, -50), P(0, -34), 20);
+
+    // arms (with a bulging bicep ball on every joint)
+    const arm = (sh, el, ha) => {
+      line(sh, el, 30); line(el, ha, 26);
+      disc(mid(sh, el, 0.55), 17);   // bicep
+      disc(el, 15);                  // elbow
+      disc(ha, 18);                  // giant fist
+    };
+    if (pose === "OVERHEAD")      { arm(shL, P(-70, -66), P(-34, -150)); arm(shR, P(70, -66), P(34, -150)); }
+    else if (pose === "SIDE")     { arm(shL, P(-108, -30), P(-168, -26)); arm(shR, P(108, -30), P(168, -26)); }
+    else if (pose === "LOWER")    { arm(shL, P(-106, 8), P(-46, 60)); arm(shR, P(106, 8), P(46, 60)); }
+    else if (pose === "CROSS")    { arm(shL, P(-24, -16), P(56, 26)); arm(shR, P(24, -16), P(-56, 26)); }
     c.restore();
   }
-  const MACHO_SPAN = 340;   // approx figure bbox in unit space
+  const MACHO_SPAN = 372;   // approx figure bbox in unit space
 
-  // title-screen SVG dudes
+  // title-screen SVG dudes — deliberately dumb, over-inflated gym bros
   function svgMacho(kind) {
-    const shades = kind === "shades"
-      ? `<rect x="34" y="40" width="32" height="12" rx="3" fill="#111"/><rect x="34" y="40" width="14" height="12" rx="3" fill="#111"/>`
-      : "";
-    const canhat = kind === "can"
-      ? `<rect x="30" y="8" width="40" height="26" rx="4" fill="#ff5e3a" stroke="#fff" stroke-width="3"/><rect x="38" y="16" width="24" height="9" rx="2" fill="#fff"/>`
-      : `<path d="M28 34 Q50 6 72 34 Z" fill="#3a2b1a"/>`;
-    return `<svg viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
-      <g fill="#f2b98a" stroke="#7a4a24" stroke-width="3" stroke-linejoin="round">
-      <circle cx="50" cy="42" r="20"/>
-      <path d="M22 78 L78 78 L70 120 L30 120 Z"/>
-      <path d="M22 78 L4 100 L14 112 L30 92 Z"/><path d="M78 78 L96 100 L86 112 L70 92 Z"/>
-      <rect x="34" y="118" width="12" height="28" rx="4"/><rect x="54" y="118" width="12" height="28" rx="4"/>
-      </g>${canhat}${shades}
-      <path d="M40 56 q10 8 20 0" stroke="#7a4a24" stroke-width="3" fill="none" stroke-linecap="round"/>
-    </svg>`;
+    const skin = "#ff9d4d", sh = "#d9702f", teeth = "#fff";
+    const trunks = kind === "shades" ? "#2f6bff" : "#e5372c";
+    // body: boulder shoulders, wasp waist, chicken legs, double-biceps flex
+    const body = `
+      <g fill="none" stroke="${sh}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M64 128 q-3 22 -1 40" stroke-width="12" stroke="${skin}"/>
+        <path d="M86 128 q3 22 1 40" stroke-width="12" stroke="${skin}"/>
+        <ellipse cx="60" cy="172" rx="12" ry="6" fill="${skin}"/><ellipse cx="90" cy="172" rx="12" ry="6" fill="${skin}"/>
+        <path d="M28 96 L122 96 L100 132 L50 132 Z" fill="${skin}"/>
+        <ellipse cx="75" cy="132" rx="26" ry="14" fill="${trunks}"/>
+        <circle cx="20" cy="70" r="24" fill="${skin}"/><circle cx="130" cy="70" r="24" fill="${skin}"/>
+        <circle cx="45" cy="52" r="16" fill="${skin}"/><circle cx="105" cy="52" r="16" fill="${skin}"/>
+        <path d="M6 78 Q-6 40 26 34" stroke-width="20" stroke="${skin}" fill="none"/>
+        <path d="M144 78 Q156 40 124 34" stroke-width="20" stroke="${skin}" fill="none"/>
+        <circle cx="12" cy="52" r="13" fill="${skin}"/><circle cx="138" cy="52" r="13" fill="${skin}"/>
+        <circle cx="26" cy="32" r="12" fill="${skin}"/><circle cx="124" cy="32" r="12" fill="${skin}"/>
+        <circle cx="52" cy="74" r="17" fill="${skin}"/><circle cx="98" cy="74" r="17" fill="${skin}"/>
+        <g fill="none" stroke="${sh}" stroke-width="3">
+          <path d="M75 92 v34"/><path d="M58 100 h34 M56 112 h38"/>
+        </g>
+        <circle cx="45" cy="70" r="2.5" fill="${sh}" stroke="none"/><circle cx="105" cy="70" r="2.5" fill="${sh}" stroke="none"/>
+      </g>`;
+    // head + face gubbins
+    const face = kind === "shades"
+      ? `<circle cx="75" cy="46" r="16" fill="${skin}" stroke="${sh}" stroke-width="3"/>
+         <path d="M60 34 q15 -8 30 0" stroke="#241a12" stroke-width="6" fill="none" stroke-linecap="round"/>
+         <rect x="58" y="40" width="34" height="11" rx="3" fill="#111"/>
+         <rect x="60" y="42" width="9" height="4" fill="#7fd4ff"/>
+         <rect x="75" y="52" width="14" height="8" rx="2" fill="${teeth}" stroke="#111" stroke-width="1.5"/>
+         <line x1="80" y1="52" x2="80" y2="60" stroke="#111" stroke-width="1.2"/>`
+      : `<rect x="59" y="20" width="32" height="34" rx="4" fill="#ffd23f" stroke="#111" stroke-width="3"/>
+         <rect x="59" y="30" width="32" height="8" fill="#e5372c"/>
+         <text x="75" y="37" font-size="8" font-family="Arial Black,sans-serif" fill="#fff" text-anchor="middle">PROT</text>
+         <path d="M70 26 l4 5 l4 -5" stroke="#111" stroke-width="2.5" fill="none"/>
+         <ellipse cx="75" cy="60" rx="8" ry="6" fill="${skin}" stroke="${sh}" stroke-width="2.5"/>`;
+    // flying sweat + impact sparkles
+    const fx = `
+      <g fill="#8ecbff">
+        <path d="M8 30 q-4 6 0 9 q4 -3 0 -9z"/><path d="M148 26 q-4 6 0 9 q4 -3 0 -9z"/>
+        <path d="M60 12 q-3 5 0 7 q3 -2 0 -7z"/>
+      </g>
+      <g fill="none" stroke="#ffd23f" stroke-width="3" stroke-linecap="round">
+        <path d="M2 62 l-6 -3"/><path d="M156 62 l6 -3"/><path d="M12 100 l-8 4"/><path d="M146 100 l8 4"/>
+      </g>`;
+    return `<svg viewBox="-6 6 168 172" xmlns="http://www.w3.org/2000/svg">${body}${face}${fx}</svg>`;
   }
+
+  const SHOUTS = ["ﾄﾞｶｰﾝ!!", "ﾌﾞﾁ破ｯﾀ!!", "ﾑｷ ﾑｷ!!", "PERFECT!!", "ﾊﾞｷﾊﾞｷ!!", "ﾅｲｽ ﾊﾞﾙｸ!!"];
 
   // =========================================================================
   //  Pose classification (upper body only)
@@ -519,7 +618,7 @@
       GS.flash = 1; GS.flashColor = "255,255,255";
       shatter();
       boom();
-      flashMsg(w.combo ? "COMBO!!" : "SUCCESS!", "#ffd23f");
+      flashMsg(w.combo ? "COMBO!!" : SHOUTS[(Math.random() * SHOUTS.length) | 0], "#ffd23f");
       const t = wallDur(GS.cleared);
       bpm = t <= 1.25 ? 160 : t <= 1.85 ? 150 : t <= 2.55 ? 140 : 130;
     } else {
@@ -527,7 +626,7 @@
       GS.shake = 22;
       GS.flash = 1; GS.flashColor = "255,40,40";
       splat();
-      flashMsg("CRASH!", "#ff4040");
+      flashMsg(["CRASH!!", "ﾍﾞｼｬｯ…", "ﾑﾘｨ!!", "ﾎﾈｵﾚﾀ…"][(Math.random() * 4) | 0], "#ff4040");
     }
     syncHud();
     GS.wall = null;
@@ -555,11 +654,11 @@
     comboLeft = 0; bpm = 130;
     hide(scrReady); hide(scrOver); hud.hidden = false;
     buildLives(); syncHud();
-    startBGM();
+    bpm = 130; setBgmMode("play"); startBGM("play");
     GS.nextAt = performance.now() / 1000 + 1.0;
   }
   function gameOver() {
-    GS.phase = "over"; stopBGM();
+    GS.phase = "over"; bpm = 120; setBgmMode("menu");
     $("overStat").innerHTML = `突破した壁 <b style="color:#ffd23f">${GS.cleared}</b> &nbsp;/&nbsp; SCORE <b style="color:#ffd23f">${GS.score}</b>`;
     setTimeout(() => { hud.hidden = true; show(scrOver); }, 700);
   }
@@ -785,7 +884,7 @@
   function show(el) { el.hidden = false; }
   function hide(el) { el.hidden = true; }
 
-  $("btnAllow").addEventListener("click", () => { initAudio(); boot(); });
+  $("btnAllow").addEventListener("click", () => { initAudio(); bpm = 118; startBGM("menu"); boot(); });
   $("btnRetry").addEventListener("click", boot);
   $("btnStart").addEventListener("click", startGame);
   $("btnAgain").addEventListener("click", () => { hide(scrOver); show(scrReady); });
