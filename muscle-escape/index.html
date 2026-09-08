@@ -296,7 +296,7 @@
   // --- gym-rock BGM, tempo = bpm ---
   let bgmOn = false, bgmMode = "menu", bStep = 0, bBar = 0, bNext = 0, bTimer = null, bpm = 140;
   const RIFF = [0, 0, 12, 0, 7, 0, 10, 8], RIFF2 = [3, 3, 15, 3, 10, 3, 8, 7];
-  const LEAD = [-1, 12, 15, 19, 15, 12, 19, 22, -1, 10, 14, 17, 22, 19, 17, 14];
+  const MEL = [-1, 12, 15, 19, 15, 12, 19, 22, -1, 10, 14, 17, 22, 19, 17, 14];
   function kick(t, v) { const o = ac.createOscillator(), gg = ac.createGain();
     o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.12);
     gg.gain.setValueAtTime(v, t); gg.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
@@ -337,7 +337,7 @@
         if (play && s === 6) kick(bNext, 0.4);
         if (play && (s === 4 || s === 12)) snare(bNext);
         if (s % 2 === 1) hat(bNext, play && s === 7);
-        if (play) { const n = LEAD[(s + bar2 * 16) % LEAD.length]; if (n >= 0 && s % 2 === 0) lead(bNext, (bar2 ? RIFF2[0] : 0) + n); }
+        if (play) { const n = MEL[(s + bar2 * 16) % MEL.length]; if (n >= 0 && s % 2 === 0) lead(bNext, (bar2 ? RIFF2[0] : 0) + n); }
       }
       bNext += spb; bStep = (bStep + 1) % 16; if (bStep === 0) bBar++;
     }
