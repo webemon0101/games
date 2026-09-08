@@ -13,7 +13,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a1a1e">
-<title>MUSCLE ESCAPE — ポーズで壁を突破</title>
+<title>MUSCLE ESCAPE — 集団走ポーズアクション</title>
 <meta name="google-adsense-account" content="ca-pub-8860612143084575">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
      crossorigin="anonymous"></script>
@@ -25,114 +25,68 @@
   body {
     background: #0c0c0f; color: #fff;
     font-family: "Arial Black", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
-    -webkit-user-select: none; user-select: none;
-    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none; touch-action: manipulation;
   }
-  #app { position: fixed; inset: 0; overflow: hidden; background: #111; }
-  #stage { position: absolute; inset: 0; will-change: transform; }
-  #cam, #game {
-    position: absolute; inset: 0; width: 100%; height: 100%; display: block;
-  }
-  #cam { object-fit: cover; background: #000; transform: scaleX(1); }
-  #game { z-index: 2; }
-  #cam-video { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+  #app { position: fixed; inset: 0; overflow: hidden; }
+  #stage { position: absolute; inset: 0; }
+  #game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 2; }
 
-  /* ---------- HUD ---------- */
+  #cam-video { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+  #cam {
+    position: absolute; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom));
+    width: clamp(116px, 30vw, 188px); aspect-ratio: 4/3; z-index: 4;
+    border: 2px solid rgba(255,255,255,.45); border-radius: 10px;
+    background: #000; opacity: .92; box-shadow: 0 6px 18px rgba(0,0,0,.5);
+  }
+  #camTag {
+    position: absolute; left: 14px; z-index: 5; font-size: 9px; letter-spacing: 2px;
+    color: #9fb0c0; bottom: calc(10px + env(safe-area-inset-bottom));
+    transform: translateY(-100%); text-shadow: 0 1px 3px #000;
+  }
+
+  /* HUD */
   #hud { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
   .topbar {
     position: absolute; top: 0; left: 0; right: 0;
     display: flex; justify-content: space-between; align-items: flex-start;
-    padding: max(10px, env(safe-area-inset-top)) 14px 8px;
-    gap: 8px;
-    text-shadow: 0 2px 6px rgba(0,0,0,.8);
+    padding: max(10px, env(safe-area-inset-top)) 14px 6px; gap: 8px;
+    text-shadow: 0 2px 6px rgba(0,0,0,.85);
   }
-  .stat { font-size: clamp(13px, 3.4vw, 20px); letter-spacing: 1px; line-height: 1.1; }
-  .stat b { display: block; font-size: clamp(19px, 5.4vw, 34px); color: #ffd23f; }
-  .lives { display: flex; gap: 5px; }
-  .can {
-    width: clamp(16px, 4.6vw, 26px); height: clamp(22px, 6.2vw, 34px);
-    border-radius: 4px; background: linear-gradient(#ff5e3a, #c62828);
-    border: 2px solid #fff; position: relative; transition: opacity .2s, filter .2s;
-  }
-  .can::before { content: ""; position: absolute; left: 15%; right: 15%; top: 32%; height: 26%;
-    background: rgba(255,255,255,.9); border-radius: 2px; }
-  .can.lost { opacity: .18; filter: grayscale(1); }
+  .stat { font-size: clamp(12px, 3.2vw, 18px); letter-spacing: 1px; line-height: 1.1; }
+  .stat b { display: block; font-size: clamp(18px, 5vw, 30px); color: #ffd23f; }
+  .lives { display: flex; gap: 5px; margin-top: 2px; }
+  .can { width: clamp(15px,4.3vw,24px); height: clamp(20px,5.8vw,32px); border-radius: 4px;
+    background: linear-gradient(#ff5e3a,#c62828); border: 2px solid #fff; position: relative;
+    transition: opacity .2s, filter .2s; }
+  .can::before { content:""; position:absolute; left:15%; right:15%; top:32%; height:26%; background:rgba(255,255,255,.9); border-radius:2px; }
+  .can.lost { opacity:.16; filter: grayscale(1); }
 
-  .posebar {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 10px 12px max(14px, env(safe-area-inset-bottom));
-    display: flex; align-items: center; justify-content: center; gap: clamp(10px, 3vw, 26px);
+  /* "your turn" pose call */
+  #turn {
+    position: absolute; top: 12%; left: 50%; transform: translateX(-50%) scale(.7);
+    width: min(78vw, 360px); text-align: center; opacity: 0; transition: opacity .12s, transform .18s;
   }
-  .panel {
-    background: rgba(10,10,14,.62); border: 2px solid rgba(255,255,255,.25);
-    border-radius: 14px; padding: 8px 14px; backdrop-filter: blur(3px);
-    text-align: center; min-width: 40vw;
+  #turn.on { opacity: 1; transform: translateX(-50%) scale(1); }
+  #turn .card {
+    background: rgba(10,10,14,.7); border: 3px solid #ffd23f; border-radius: 16px;
+    padding: 8px 10px 12px; backdrop-filter: blur(3px);
   }
-  .panel .k { font-size: clamp(10px, 2.6vw, 13px); letter-spacing: 2px; color: #9fb0c0; }
-  .panel .v { font-size: clamp(17px, 5vw, 30px); letter-spacing: 1px; }
-  .panel.you .v.ok { color: #35e07f; }
-  .panel.you .v.no { color: #ff5b5b; }
-  .panel.need .v { color: #ffd23f; }
-
-  .gauge {
-    position: absolute; left: 8%; right: 8%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 96px);
-    height: 12px; background: rgba(0,0,0,.5); border: 2px solid rgba(255,255,255,.3); border-radius: 8px; overflow: hidden;
-  }
-  .gauge i { display: block; height: 100%; width: 100%; background: #35e07f; transform-origin: left; }
+  #turn .k { font-size: clamp(11px,3vw,15px); letter-spacing: 3px; color: #ffd23f; }
+  #turn canvas { width: clamp(70px,20vw,110px); height: clamp(70px,20vw,110px); display: block; margin: 2px auto; }
+  #turn .v { font-size: clamp(16px,4.6vw,26px); letter-spacing: 1px; }
+  #turn .bar { height: 12px; margin-top: 8px; border: 2px solid rgba(255,255,255,.35);
+    border-radius: 8px; overflow: hidden; background: rgba(0,0,0,.5); }
+  #turn .bar i { display: block; height: 100%; width: 100%; background: #35e07f; transform-origin: left; }
+  #turn .you { margin-top: 6px; font-size: clamp(11px,3vw,14px); }
+  #turn .you.ok { color: #35e07f; } #turn .you.no { color: #ff6b6b; }
 
   .flashmsg {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-size: clamp(46px, 15vw, 130px); font-style: italic; letter-spacing: 2px;
-    -webkit-text-stroke: 3px #000; opacity: 0; transition: opacity .08s;
-    text-shadow: 0 0 30px currentColor;
+    font-size: clamp(42px, 13vw, 116px); font-style: italic; letter-spacing: 2px;
+    -webkit-text-stroke: 3px #000; opacity: 0; text-shadow: 0 0 30px currentColor;
   }
-  .flashmsg.show { opacity: 1; animation: pop .45s ease-out; }
-  @keyframes pop { 0%{ transform: scale(.4) rotate(-6deg);} 60%{ transform: scale(1.15) rotate(3deg);} 100%{ transform: scale(1) rotate(0);} }
-
-  /* ---------- full-screen screens ---------- */
-  .screen {
-    position: absolute; inset: 0; z-index: 6;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 16px; padding: 22px; text-align: center; overflow-y: auto;
-    background: radial-gradient(circle at 50% 30%, #2a1c12, #0c0c0f 75%);
-  }
-  .screen[hidden] { display: none; }
-  @media (max-height: 720px) { .screen { justify-content: flex-start; } }
-  @media (max-width: 380px) { .poselist { grid-template-columns: repeat(2, 1fr); } }
-  .screen h1 {
-    font-size: clamp(30px, 8.5vw, 68px); line-height: .95; letter-spacing: 1px;
-    color: #ffd23f; -webkit-text-stroke: 2px #7a1f00;
-    text-shadow: 0 6px 0 #7a1f00, 0 10px 24px rgba(0,0,0,.6);
-    transform: rotate(-2deg);
-  }
-  .screen p { max-width: 560px; font-family: system-ui, sans-serif; font-weight: 600;
-    font-size: clamp(12px, 3.2vw, 15px); line-height: 1.7; color: #d9d2c8; }
-  .bigbtn {
-    pointer-events: auto; cursor: pointer; border: none;
-    font-family: inherit; font-size: clamp(18px, 5vw, 26px); letter-spacing: 2px;
-    color: #1a1207; padding: 18px 34px; border-radius: 16px;
-    background: linear-gradient(#ffe37a, #ffb300);
-    box-shadow: 0 8px 0 #a56b00, 0 14px 30px rgba(0,0,0,.5);
-  }
-  .bigbtn:active { transform: translateY(5px); box-shadow: 0 3px 0 #a56b00; }
-  .bigbtn.sm { font-size: clamp(13px, 3.6vw, 17px); padding: 12px 22px; box-shadow: 0 5px 0 #a56b00; }
-  .hint { font-family: system-ui, sans-serif; font-size: 12px; color: #8a8a8a; }
-  .machos { display: flex; gap: 6px; align-items: flex-end; }
-  .machos svg { width: clamp(84px, 26vw, 140px); height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
-  .machos svg:nth-child(1) { animation: flexL 0.5s ease-in-out infinite alternate; }
-  .machos svg:nth-child(2) { animation: flexR 0.6s ease-in-out infinite alternate; }
-  @keyframes flexL { from { transform: rotate(-3deg) scale(1, 1); } to { transform: rotate(2deg) scale(1.05, .96); } }
-  @keyframes flexR { from { transform: rotate(3deg) scale(1, 1); } to { transform: rotate(-2deg) scale(1.06, .95); } }
-  .load { font-family: system-ui, sans-serif; font-weight: 700; color: #ffd23f; letter-spacing: 1px; }
-  .spin { width: 44px; height: 44px; border: 5px solid rgba(255,255,255,.2); border-top-color: #ffd23f;
-    border-radius: 50%; animation: sp 0.9s linear infinite; }
-  @keyframes sp { to { transform: rotate(360deg); } }
-  .err { color: #ff6b6b; font-family: system-ui, sans-serif; font-weight: 700; max-width: 480px; }
-
-  .poselist { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 520px; width: 100%; }
-  .poselist div { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15);
-    border-radius: 10px; padding: 8px 4px; font-family: system-ui, sans-serif; font-weight: 700; font-size: 11px; }
-  .poselist svg { width: 100%; height: 62px; display: block; margin-bottom: 4px; }
+  .flashmsg.show { opacity: 1; animation: pop .5s ease-out; }
+  @keyframes pop { 0%{transform:scale(.4) rotate(-7deg)} 55%{transform:scale(1.18) rotate(4deg)} 100%{transform:scale(1) rotate(0)} }
 
   #btnMute {
     position: absolute; z-index: 7; top: max(8px, env(safe-area-inset-top)); right: 10px;
@@ -140,772 +94,713 @@
     background: rgba(10,10,14,.55); color: #fff; font-size: 17px; cursor: pointer;
   }
   #btnMute:active { transform: scale(.92); }
+
+  .screen {
+    position: absolute; inset: 0; z-index: 6;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 15px; padding: 22px; text-align: center; overflow-y: auto;
+    background: radial-gradient(circle at 50% 26%, #3a2410, #0c0c0f 74%);
+  }
+  .screen[hidden] { display: none; }
+  @media (max-height: 720px) { .screen { justify-content: flex-start; } }
+  .screen h1 {
+    font-size: clamp(30px, 8.5vw, 66px); line-height: .95; letter-spacing: 1px;
+    color: #ffd23f; -webkit-text-stroke: 2px #7a1f00;
+    text-shadow: 0 6px 0 #7a1f00, 0 10px 24px rgba(0,0,0,.6); transform: rotate(-2deg);
+  }
+  .screen p { max-width: 560px; font-family: system-ui, sans-serif; font-weight: 600;
+    font-size: clamp(12px, 3.2vw, 15px); line-height: 1.7; color: #e0d8cc; }
+  .bigbtn {
+    pointer-events: auto; cursor: pointer; border: none; font-family: inherit;
+    font-size: clamp(18px, 5vw, 26px); letter-spacing: 2px; color: #1a1207;
+    padding: 18px 34px; border-radius: 16px;
+    background: linear-gradient(#ffe37a, #ffb300); box-shadow: 0 8px 0 #a56b00, 0 14px 30px rgba(0,0,0,.5);
+  }
+  .bigbtn:active { transform: translateY(5px); box-shadow: 0 3px 0 #a56b00; }
+  .bigbtn.sm { font-size: clamp(13px,3.6vw,17px); padding: 12px 22px; box-shadow: 0 5px 0 #a56b00; }
+  .hint { font-family: system-ui, sans-serif; font-size: 12px; color: #8a8a8a; }
+  .err { color: #ff6b6b; font-family: system-ui, sans-serif; font-weight: 700; max-width: 480px; }
+  .spin { width: 44px; height: 44px; border: 5px solid rgba(255,255,255,.2); border-top-color: #ffd23f;
+    border-radius: 50%; animation: sp .9s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  .marchrow { display: flex; gap: 2px; align-items: flex-end; height: 130px; }
+  .marchrow canvas { width: clamp(52px, 16vw, 92px); height: 128px; }
+  .marchrow canvas:nth-child(2) { animation: bob .42s ease-in-out infinite alternate; }
+  .marchrow canvas:nth-child(1),.marchrow canvas:nth-child(3) { animation: bob .42s ease-in-out infinite alternate -.21s; }
+  @keyframes bob { from { transform: translateY(0) } to { transform: translateY(-9px) } }
+  .poselist { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; max-width: 520px; width: 100%; }
+  .poselist div { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15);
+    border-radius: 10px; padding: 6px 4px; font-family: system-ui, sans-serif; font-weight: 700; font-size: 11px; }
+  .poselist img { width: 100%; height: 58px; object-fit: contain; display: block; margin-bottom: 3px; }
+  @media (max-width: 380px) { .poselist { grid-template-columns: repeat(2,1fr); } }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="stage">
     <video id="cam-video" playsinline muted></video>
-    <canvas id="cam"></canvas>
     <canvas id="game"></canvas>
   </div>
-
+  <canvas id="cam"></canvas>
+  <div id="camTag">YOU</div>
   <button id="btnMute" aria-label="sound">&#128266;</button>
 
   <div id="hud" hidden>
     <div class="topbar">
       <div class="stat">SCORE<b id="hScore">0</b></div>
       <div class="stat" style="text-align:center">WALLS<b id="hWalls">0</b></div>
-      <div class="stat" style="text-align:right">LIFE
-        <div class="lives" id="hLives"></div>
-      </div>
+      <div class="stat" style="text-align:right">LIFE<div class="lives" id="hLives"></div></div>
     </div>
-    <div class="gauge"><i id="hGauge"></i></div>
-    <div class="posebar">
-      <div class="panel need"><div class="k">壁のポーズ</div><div class="v" id="hNeed">—</div></div>
-      <div class="panel you"><div class="k">あなた</div><div class="v" id="hYou">—</div></div>
+    <div id="turn">
+      <div class="card">
+        <div class="k">YOUR POSE!</div>
+        <canvas id="turnIcon" width="140" height="140"></canvas>
+        <div class="v" id="turnName">—</div>
+        <div class="bar"><i id="turnBar"></i></div>
+        <div class="you" id="turnYou">—</div>
+      </div>
     </div>
     <div class="flashmsg" id="hFlash"></div>
   </div>
 
-  <!-- START / permission -->
   <div class="screen" id="scrMenu">
-    <div class="machos" id="menuMachos"></div>
+    <div class="marchrow" id="menuRow"></div>
     <h1>MUSCLE<br>ESCAPE</h1>
-    <p>プロテイン工場が大爆発！ あふれ出たプロテインで超マッチョになった脱出者たちが、
-       崩れる工場から<strong>壁をぶち破って</strong>逃げる！<br>
-       迫る「人型の穴」に体のポーズを合わせろ。カメラに<strong>上半身（頭・肩・肘・手首）</strong>が写ればOK。</p>
+    <p>崩れる工場を<strong>マッチョの大行進</strong>で脱出！ 先頭が壁をぶち破り、列が前進、
+       そして<strong>自分の番</strong>が来る。迫る「人型の穴」に体のポーズを合わせろ。
+       カメラに<strong>頭〜手首</strong>が写ればOK。</p>
     <div class="poselist" id="poseGuide"></div>
-    <button class="bigbtn" id="btnAllow">カメラを許可する</button>
+    <button class="bigbtn" id="btnAllow">カメラを許可して行進スタート</button>
     <div class="hint">カメラ映像は端末内だけで処理され、どこにも送信されません。</div>
   </div>
 
-  <!-- loading -->
   <div class="screen" id="scrLoad" hidden>
     <div class="spin"></div>
-    <div class="load" id="loadMsg">AI（骨格認識）を準備中…</div>
+    <div id="loadMsg" style="font-family:system-ui;font-weight:700;color:#ffd23f;letter-spacing:1px">AI（骨格認識）を準備中…</div>
     <div class="err" id="loadErr" hidden></div>
     <button class="bigbtn sm" id="btnRetry" hidden>もう一度</button>
   </div>
 
-  <!-- ready -->
-  <div class="screen" id="scrReady" hidden style="background:rgba(0,0,0,.35)">
-    <h1 style="font-size:clamp(24px,7vw,52px)">READY?</h1>
-    <p>全身を映さなくてOK。<strong>頭〜手首</strong>がフレームに入る位置に立って。</p>
-    <button class="bigbtn" id="btnStart">スタート！</button>
+  <div class="screen" id="scrReady" hidden style="background:rgba(0,0,0,.4)">
+    <h1 style="font-size:clamp(24px,7vw,50px)">READY?</h1>
+    <p>全身は不要。<strong>頭〜手首</strong>がフレームに入る位置に立って、下の「YOU」映像で骨格が出るのを確認。</p>
+    <button class="bigbtn" id="btnStart">行進スタート！</button>
   </div>
 
-  <!-- game over -->
   <div class="screen" id="scrOver" hidden>
-    <h1>YOU<br>CRUSHED</h1>
+    <h1>脱落…</h1>
     <p id="overStat" style="font-size:clamp(15px,4.4vw,22px);color:#fff"></p>
-    <button class="bigbtn" id="btnAgain">もう一度</button>
+    <button class="bigbtn" id="btnAgain">列に戻る</button>
   </div>
 </div>
 
 <script>
 (() => {
   "use strict";
-
-  // =========================================================================
-  //  DOM
-  // =========================================================================
   const $ = id => document.getElementById(id);
-  const app = $("app"), stage = $("stage");
   const video = $("cam-video");
   const cam = $("cam"), camCtx = cam.getContext("2d");
-  const game = $("game"), gctx = game.getContext("2d");
+  const game = $("game"), g = game.getContext("2d");
   const hud = $("hud");
   const scrMenu = $("scrMenu"), scrLoad = $("scrLoad"), scrReady = $("scrReady"), scrOver = $("scrOver");
-  const hScore = $("hScore"), hWalls = $("hWalls"), hLives = $("hLives");
-  const hNeed = $("hNeed"), hYou = $("hYou"), hGauge = $("hGauge"), hFlash = $("hFlash");
+  const hScore = $("hScore"), hWalls = $("hWalls"), hLives = $("hLives"), hFlash = $("hFlash");
+  const elTurn = $("turn"), turnName = $("turnName"), turnBar = $("turnBar"), turnYou = $("turnYou");
+  const turnIcon = $("turnIcon"), turnIconCtx = turnIcon.getContext("2d");
 
   const POSES = ["OVERHEAD", "SIDE", "LOWER", "CROSS"];
   const POSE_JP = { OVERHEAD: "上（バンザイ）", SIDE: "横（水平）", LOWER: "下（腰）", CROSS: "クロス（胸）" };
+  const SHOUTS = ["ﾄﾞｶｰﾝ!!", "ﾌﾞﾁ破ｯﾀ!!", "ﾑｷ ﾑｷ!!", "PERFECT!!", "ﾊﾞｷﾊﾞｷ!!", "ﾅｲｽ ﾊﾞﾙｸ!!"];
+  const FAILS = ["ﾍﾞｼｬｯ…", "脱落!!", "ﾎﾈｵﾚﾀ…", "ﾑﾘｨ!!"];
 
-  // =========================================================================
-  //  Audio (Web Audio API — all generated)
-  // =========================================================================
+  // =====================================================================
+  //  Audio
+  // =====================================================================
   let ac = null, master = null, muted = false;
   function initAudio() {
     if (ac) return;
     ac = new (window.AudioContext || window.webkitAudioContext)();
     master = ac.createGain(); master.gain.value = 0.55; master.connect(ac.destination);
   }
-  function noiseBuffer(dur) {
-    const n = ac.sampleRate * dur, b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  function noiseBuffer(d) {
+    const n = ac.sampleRate * d, b = ac.createBuffer(1, n, ac.sampleRate), a = b.getChannelData(0);
+    for (let i = 0; i < n; i++) a[i] = Math.random() * 2 - 1;
     return b;
   }
   function boom() {
     if (!ac || muted) return;
     const t = ac.currentTime;
-    // sub thump
-    const o = ac.createOscillator(), g = ac.createGain();
-    o.type = "sine"; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(32, t + 0.5);
-    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.62);
-    // debris noise
+    const o = ac.createOscillator(), gg = ac.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(170, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.55);
+    gg.gain.setValueAtTime(0.95, t); gg.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    o.connect(gg); gg.connect(master); o.start(t); o.stop(t + 0.62);
     const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.5);
-    const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.setValueAtTime(1800, t); f.frequency.exponentialRampToValueAtTime(200, t + 0.45);
-    const ng = ac.createGain(); ng.gain.setValueAtTime(0.7, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    const f = ac.createBiquadFilter(); f.type = "lowpass";
+    f.frequency.setValueAtTime(2000, t); f.frequency.exponentialRampToValueAtTime(160, t + 0.45);
+    const ng = ac.createGain(); ng.gain.setValueAtTime(0.8, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
     s.connect(f); f.connect(ng); ng.connect(master); s.start(t); s.stop(t + 0.5);
   }
   function splat() {
     if (!ac || muted) return;
     const t = ac.currentTime;
-    const o = ac.createOscillator(), g = ac.createGain();
-    o.type = "square"; o.frequency.setValueAtTime(240, t); o.frequency.exponentialRampToValueAtTime(50, t + 0.35);
-    g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.42);
-    const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.25);
-    const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 400;
-    const ng = ac.createGain(); ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-    s.connect(f); f.connect(ng); ng.connect(master); s.start(t); s.stop(t + 0.25);
-  }
-  function blip(freq, dur = 0.06, vol = 0.2, type = "square") {
-    if (!ac || muted) return;
-    const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
-    o.type = type; o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+    const o = ac.createOscillator(), gg = ac.createGain();
+    o.type = "square"; o.frequency.setValueAtTime(240, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.35);
+    gg.gain.setValueAtTime(0.5, t); gg.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    o.connect(gg); gg.connect(master); o.start(t); o.stop(t + 0.42);
+    const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.22);
+    const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 380;
+    const ng = ac.createGain(); ng.gain.setValueAtTime(0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    s.connect(f); f.connect(ng); ng.connect(master); s.start(t); s.stop(t + 0.22);
   }
 
-  // --- BGM: dumb driving gym-rock loop. bass riff + kick/snare/hats,
-  //     plus a bright square lead once the game is running. tempo = bpm. ---
-  let bgmOn = false, bgmMode = "menu", bgmStep = 0, bgmBar = 0, bgmNext = 0, bgmTimer = null, bpm = 130;
-  const RIFF = [0, 0, 12, 0, 7, 0, 10, 8];          // bass, 16 steps (2 bars) below
-  const RIFF2 = [3, 3, 15, 3, 10, 3, 8, 7];
-  const LEAD = [-1, 12, 15, 19, 15, 12, 19, 22, -1, 10, 14, 17, 22, 19, 17, 14];  // -1 = rest
-
-  function kick(t, v = 0.55) {
-    const o = ac.createOscillator(), g = ac.createGain();
+  // --- gym-rock BGM, tempo = bpm ---
+  let bgmOn = false, bgmMode = "menu", bStep = 0, bBar = 0, bNext = 0, bTimer = null, bpm = 140;
+  const RIFF = [0, 0, 12, 0, 7, 0, 10, 8], RIFF2 = [3, 3, 15, 3, 10, 3, 8, 7];
+  const LEAD = [-1, 12, 15, 19, 15, 12, 19, 22, -1, 10, 14, 17, 22, 19, 17, 14];
+  function kick(t, v) { const o = ac.createOscillator(), gg = ac.createGain();
     o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.12);
-    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.19);
-  }
-  function snare(t) {
-    const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.2);
+    gg.gain.setValueAtTime(v, t); gg.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
+    o.connect(gg); gg.connect(master); o.start(t); o.stop(t + 0.19); }
+  function snare(t) { const s = ac.createBufferSource(); s.buffer = noiseBuffer(0.2);
     const f = ac.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 1500;
-    const g = ac.createGain(); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-    const o = ac.createOscillator(), og = ac.createGain();
-    o.type = "triangle"; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.1);
-    og.gain.setValueAtTime(0.18, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-    s.connect(f); f.connect(g); g.connect(master); o.connect(og); og.connect(master);
-    s.start(t); s.stop(t + 0.2); o.start(t); o.stop(t + 0.13);
-  }
-  function hat(t, open) {
-    const s = ac.createBufferSource(); s.buffer = noiseBuffer(open ? 0.12 : 0.04);
+    const gg = ac.createGain(); gg.gain.setValueAtTime(0.34, t); gg.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    s.connect(f); f.connect(gg); gg.connect(master); s.start(t); s.stop(t + 0.2); }
+  function hat(t, open) { const s = ac.createBufferSource(); s.buffer = noiseBuffer(open ? 0.12 : 0.04);
     const f = ac.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 8000;
-    const g = ac.createGain(); g.gain.setValueAtTime(open ? 0.1 : 0.14, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.12 : 0.045));
-    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + 0.14);
-  }
+    const gg = ac.createGain(); gg.gain.setValueAtTime(open ? 0.1 : 0.14, t); gg.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.12 : 0.045));
+    s.connect(f); f.connect(gg); gg.connect(master); s.start(t); s.stop(t + 0.14); }
   function bass(t, semi, dur) {
-    const root = 41.2; // E1
-    const f = root * Math.pow(2, semi / 12);
-    const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), flt = ac.createBiquadFilter();
-    o.type = "sawtooth"; o2.type = "square"; o.frequency.value = f; o2.frequency.value = f * 1.005 * 2;
-    flt.type = "lowpass"; flt.frequency.value = 340 + (bpm - 110) * 24; flt.Q.value = 9;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.3, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(flt); o2.connect(flt); flt.connect(g); g.connect(master);
+    const f = 41.2 * Math.pow(2, semi / 12);
+    const o = ac.createOscillator(), o2 = ac.createOscillator(), gg = ac.createGain(), flt = ac.createBiquadFilter();
+    o.type = "sawtooth"; o2.type = "square"; o.frequency.value = f; o2.frequency.value = f * 2.01;
+    flt.type = "lowpass"; flt.frequency.value = 360 + (bpm - 120) * 22; flt.Q.value = 9;
+    gg.gain.setValueAtTime(0.0001, t); gg.gain.exponentialRampToValueAtTime(0.3, t + 0.012); gg.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(flt); o2.connect(flt); flt.connect(gg); gg.connect(master);
     o.start(t); o2.start(t); o.stop(t + dur + 0.02); o2.stop(t + dur + 0.02);
   }
   function lead(t, semi) {
     const f = 41.2 * Math.pow(2, (semi + 24) / 12);
-    const o = ac.createOscillator(), g = ac.createGain();
+    const o = ac.createOscillator(), gg = ac.createGain();
     o.type = "square"; o.frequency.setValueAtTime(f, t);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.11, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.18);
+    gg.gain.setValueAtTime(0.0001, t); gg.gain.exponentialRampToValueAtTime(0.1, t + 0.01); gg.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(gg); gg.connect(master); o.start(t); o.stop(t + 0.18);
   }
   function bgmTick() {
     if (!bgmOn) return;
-    const spb = (60 / bpm) / 4;                        // 16th notes
-    if (bgmNext < ac.currentTime - 0.4) bgmNext = ac.currentTime + 0.06;   // resync after tab throttle
-    while (bgmNext < ac.currentTime + 0.14) {
+    const spb = (60 / bpm) / 4;
+    if (bNext < ac.currentTime - 0.4) bNext = ac.currentTime + 0.06;
+    while (bNext < ac.currentTime + 0.14) {
       if (!muted) {
-        const play = bgmMode === "play";
-        const s16 = bgmStep, s8 = s16 >> 1, bar2 = (bgmBar % 2);
-        // bass on every 8th
-        if (s16 % 2 === 0) {
-          const seq = bar2 ? RIFF2 : RIFF;
-          bass(bgmNext, seq[s8 % 8], play ? 0.16 : 0.2);
-        }
-        // drums
-        if (s16 % 4 === 0) kick(bgmNext, play ? 0.6 : 0.4);
-        if (play && s16 === 6) kick(bgmNext, 0.4);
-        if (play && (s16 === 4 || s16 === 12)) snare(bgmNext);
-        if (s16 % 2 === 1) hat(bgmNext, play && s16 === 7);
-        // lead (only in-game)
-        if (play) {
-          const n = LEAD[(s16 + bar2 * 16) % LEAD.length];
-          if (n >= 0 && s16 % 2 === 0) lead(bgmNext, bar2 ? RIFF2[0] + n : n);
-        }
+        const play = bgmMode === "play", s = bStep, bar2 = bBar % 2;
+        if (s % 2 === 0) bass(bNext, (bar2 ? RIFF2 : RIFF)[(s >> 1) % 8], play ? 0.16 : 0.2);
+        if (s % 4 === 0) kick(bNext, play ? 0.6 : 0.4);
+        if (play && s === 6) kick(bNext, 0.4);
+        if (play && (s === 4 || s === 12)) snare(bNext);
+        if (s % 2 === 1) hat(bNext, play && s === 7);
+        if (play) { const n = LEAD[(s + bar2 * 16) % LEAD.length]; if (n >= 0 && s % 2 === 0) lead(bNext, (bar2 ? RIFF2[0] : 0) + n); }
       }
-      bgmNext += spb;
-      bgmStep = (bgmStep + 1) % 16;
-      if (bgmStep === 0) bgmBar++;
+      bNext += spb; bStep = (bStep + 1) % 16; if (bStep === 0) bBar++;
     }
-    bgmTimer = setTimeout(bgmTick, 25);
+    bTimer = setTimeout(bgmTick, 25);
   }
-  function startBGM(mode) {
-    bgmMode = mode || "menu";
-    if (!ac || bgmOn) return;
-    bgmOn = true; bgmStep = 0; bgmBar = 0; bgmNext = ac.currentTime + 0.06; bgmTick();
-  }
-  function setBgmMode(mode) { bgmMode = mode; }
-  function stopBGM() { bgmOn = false; clearTimeout(bgmTimer); }
+  function startBGM(mode) { bgmMode = mode || "menu"; if (!ac || bgmOn) return; bgmOn = true; bStep = 0; bBar = 0; bNext = ac.currentTime + 0.06; bgmTick(); }
+  function setBgmMode(m) { bgmMode = m; }
 
-  // =========================================================================
-  //  Comical macho silhouettes  (canvas paths — used as wall cut-outs + icons)
-  // =========================================================================
-  // absurdly buff cartoon body — tiny head, boulder shoulders, wasp waist,
-  // little legs. drawn as a blob of thick strokes + discs so it still reads
-  // as a clean per-pose silhouette when punched out of a wall.
-  function drawMacho(c, pose, cx, cy, s, color) {
+  // =====================================================================
+  //  Buff cartoon macho — back view, chunky. mode: RUN | pose name
+  // =====================================================================
+  function drawBuff(c, mode, cx, cy, s, col, col2, phase) {
     c.save();
-    c.lineCap = "round"; c.lineJoin = "round";
-    c.strokeStyle = color; c.fillStyle = color;
+    c.lineCap = "round"; c.lineJoin = "round"; c.strokeStyle = col; c.fillStyle = col;
     const P = (x, y) => ({ x: cx + x * s, y: cy + y * s });
     const line = (a, b, w) => { c.lineWidth = w * s; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); };
     const disc = (p, r) => { c.beginPath(); c.arc(p.x, p.y, r * s, 0, 7); c.fill(); };
     const mid = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    const run = mode === "RUN";
+    const sw = run ? Math.sin(phase) : 0;
 
-    // teeny legs
-    line(P(-14, 40), P(-20, 118), 30); line(P(14, 40), P(20, 118), 30);
-    disc(P(-24, 122), 13); disc(P(24, 122), 13);
-    // wasp-waist V torso
-    const shL = P(-64, -30), shR = P(64, -30), wL = P(-16, 52), wR = P(16, 52);
+    // legs (one up, one down when running)
+    const hipL = P(-14, 42), hipR = P(14, 42);
+    const footL = P(-17, 112 + sw * 12), footR = P(17, 112 - sw * 12);
+    line(hipL, footL, 26); line(hipR, footR, 26);
+    disc({ x: footL.x, y: footL.y + 4 * s }, 10); disc({ x: footR.x, y: footR.y + 4 * s }, 10);
+    // back / lats (wide V, seen from behind)
+    const shL = P(-60, -38), shR = P(60, -38), wL = P(-16, 46), wR = P(16, 46);
     c.beginPath(); c.moveTo(shL.x, shL.y); c.lineTo(shR.x, shR.y); c.lineTo(wR.x, wR.y); c.lineTo(wL.x, wL.y); c.closePath(); c.fill();
-    // slab pecs
-    disc(P(-24, -6), 20); disc(P(24, -6), 20);
-    // boulder traps + delts
-    disc(P(-30, -44), 20); disc(P(30, -44), 20);
-    disc(P(-60, -28), 27); disc(P(60, -28), 27);
-    // tiny head, sunk between the traps
-    disc(P(0, -66), 17);
-    line(P(0, -50), P(0, -34), 20);
+    // tank top
+    c.fillStyle = col2;
+    c.beginPath(); c.moveTo(P(-46, -34).x, P(-46, -34).y); c.lineTo(P(46, -34).x, P(46, -34).y); c.lineTo(P(24, 8).x, P(24, 8).y); c.lineTo(P(-24, 8).x, P(-24, 8).y); c.closePath(); c.fill();
+    c.fillStyle = col;
+    // traps + delts + tiny head
+    disc(P(-22, -50), 15); disc(P(22, -50), 15);
+    disc(P(-56, -34), 22); disc(P(56, -34), 22);
+    disc(P(0, -66), 15);
+    disc(P(0, -78), 5);   // dumb top-knot
 
-    // arms (with a bulging bicep ball on every joint)
-    const arm = (sh, el, ha) => {
-      line(sh, el, 30); line(el, ha, 26);
-      disc(mid(sh, el, 0.55), 17);   // bicep
-      disc(el, 15);                  // elbow
-      disc(ha, 18);                  // giant fist
-    };
-    if (pose === "OVERHEAD")      { arm(shL, P(-70, -66), P(-34, -150)); arm(shR, P(70, -66), P(34, -150)); }
-    else if (pose === "SIDE")     { arm(shL, P(-108, -30), P(-168, -26)); arm(shR, P(108, -30), P(168, -26)); }
-    else if (pose === "LOWER")    { arm(shL, P(-106, 8), P(-46, 60)); arm(shR, P(106, 8), P(46, 60)); }
-    else if (pose === "CROSS")    { arm(shL, P(-24, -16), P(56, 26)); arm(shR, P(24, -16), P(-56, 26)); }
+    const arm = (sh, el, ha) => { line(sh, el, 28); line(el, ha, 24); disc(mid(sh, el, 0.55), 16); disc(el, 13); disc(ha, 17); };
+    if (mode === "OVERHEAD") { arm(shL, P(-68, -60), P(-32, -142)); arm(shR, P(68, -60), P(32, -142)); }
+    else if (mode === "SIDE") { arm(shL, P(-104, -34), P(-162, -30)); arm(shR, P(104, -34), P(162, -30)); }
+    else if (mode === "LOWER") { arm(shL, P(-104, 6), P(-44, 56)); arm(shR, P(104, 6), P(44, 56)); }
+    else if (mode === "CROSS") { arm(shL, P(-22, -14), P(54, 24)); arm(shR, P(22, -14), P(-54, 24)); }
+    else { // RUN — pumping
+      arm(shL, P(-56, -18 + sw * 10), P(-40, 8 - sw * 34));
+      arm(shR, P(56, -18 - sw * 10), P(40, 8 + sw * 34));
+    }
     c.restore();
   }
-  const MACHO_SPAN = 372;   // approx figure bbox in unit space
+  const SPAN = 360;
 
-  // title-screen SVG dudes — deliberately dumb, over-inflated gym bros
-  function svgMacho(kind) {
-    const skin = "#ff9d4d", sh = "#d9702f", teeth = "#fff";
-    const trunks = kind === "shades" ? "#2f6bff" : "#e5372c";
-    // body: boulder shoulders, wasp waist, chicken legs, double-biceps flex
-    const body = `
-      <g fill="none" stroke="${sh}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
-        <path d="M64 128 q-3 22 -1 40" stroke-width="12" stroke="${skin}"/>
-        <path d="M86 128 q3 22 1 40" stroke-width="12" stroke="${skin}"/>
-        <ellipse cx="60" cy="172" rx="12" ry="6" fill="${skin}"/><ellipse cx="90" cy="172" rx="12" ry="6" fill="${skin}"/>
-        <path d="M28 96 L122 96 L100 132 L50 132 Z" fill="${skin}"/>
-        <ellipse cx="75" cy="132" rx="26" ry="14" fill="${trunks}"/>
-        <circle cx="20" cy="70" r="24" fill="${skin}"/><circle cx="130" cy="70" r="24" fill="${skin}"/>
-        <circle cx="45" cy="52" r="16" fill="${skin}"/><circle cx="105" cy="52" r="16" fill="${skin}"/>
-        <path d="M6 78 Q-6 40 26 34" stroke-width="20" stroke="${skin}" fill="none"/>
-        <path d="M144 78 Q156 40 124 34" stroke-width="20" stroke="${skin}" fill="none"/>
-        <circle cx="12" cy="52" r="13" fill="${skin}"/><circle cx="138" cy="52" r="13" fill="${skin}"/>
-        <circle cx="26" cy="32" r="12" fill="${skin}"/><circle cx="124" cy="32" r="12" fill="${skin}"/>
-        <circle cx="52" cy="74" r="17" fill="${skin}"/><circle cx="98" cy="74" r="17" fill="${skin}"/>
-        <g fill="none" stroke="${sh}" stroke-width="3">
-          <path d="M75 92 v34"/><path d="M58 100 h34 M56 112 h38"/>
-        </g>
-        <circle cx="45" cy="70" r="2.5" fill="${sh}" stroke="none"/><circle cx="105" cy="70" r="2.5" fill="${sh}" stroke="none"/>
-      </g>`;
-    // head + face gubbins
-    const face = kind === "shades"
-      ? `<circle cx="75" cy="46" r="16" fill="${skin}" stroke="${sh}" stroke-width="3"/>
-         <path d="M60 34 q15 -8 30 0" stroke="#241a12" stroke-width="6" fill="none" stroke-linecap="round"/>
-         <rect x="58" y="40" width="34" height="11" rx="3" fill="#111"/>
-         <rect x="60" y="42" width="9" height="4" fill="#7fd4ff"/>
-         <rect x="75" y="52" width="14" height="8" rx="2" fill="${teeth}" stroke="#111" stroke-width="1.5"/>
-         <line x1="80" y1="52" x2="80" y2="60" stroke="#111" stroke-width="1.2"/>`
-      : `<rect x="59" y="20" width="32" height="34" rx="4" fill="#ffd23f" stroke="#111" stroke-width="3"/>
-         <rect x="59" y="30" width="32" height="8" fill="#e5372c"/>
-         <text x="75" y="37" font-size="8" font-family="Arial Black,sans-serif" fill="#fff" text-anchor="middle">PROT</text>
-         <path d="M70 26 l4 5 l4 -5" stroke="#111" stroke-width="2.5" fill="none"/>
-         <ellipse cx="75" cy="60" rx="8" ry="6" fill="${skin}" stroke="${sh}" stroke-width="2.5"/>`;
-    // flying sweat + impact sparkles
-    const fx = `
-      <g fill="#8ecbff">
-        <path d="M8 30 q-4 6 0 9 q4 -3 0 -9z"/><path d="M148 26 q-4 6 0 9 q4 -3 0 -9z"/>
-        <path d="M60 12 q-3 5 0 7 q3 -2 0 -7z"/>
-      </g>
-      <g fill="none" stroke="#ffd23f" stroke-width="3" stroke-linecap="round">
-        <path d="M2 62 l-6 -3"/><path d="M156 62 l6 -3"/><path d="M12 100 l-8 4"/><path d="M146 100 l8 4"/>
-      </g>`;
-    return `<svg viewBox="-6 6 168 172" xmlns="http://www.w3.org/2000/svg">${body}${face}${fx}</svg>`;
-  }
-
-  const SHOUTS = ["ﾄﾞｶｰﾝ!!", "ﾌﾞﾁ破ｯﾀ!!", "ﾑｷ ﾑｷ!!", "PERFECT!!", "ﾊﾞｷﾊﾞｷ!!", "ﾅｲｽ ﾊﾞﾙｸ!!"];
-
-  // =========================================================================
-  //  Pose classification (upper body only)
-  // =========================================================================
-  let landmarks = null;
-  let poseHist = [];
-  function vis(l) { return l && (l.visibility === undefined || l.visibility > 0.35); }
+  // =====================================================================
+  //  Pose classification (upper body)
+  // =====================================================================
+  let landmarks = null, poseHist = [];
+  const vis = l => l && (l.visibility === undefined || l.visibility > 0.35);
   function classify(L) {
     if (!L) return null;
-    const need = [0, 11, 12, 13, 14, 15, 16];
-    for (const i of need) if (!vis(L[i])) return null;
+    for (const i of [0, 11, 12, 13, 14, 15, 16]) if (!vis(L[i])) return null;
     const nose = L[0], Lsh = L[11], Rsh = L[12], Lel = L[13], Rel = L[14], Lwr = L[15], Rwr = L[16];
-    const shY = (Lsh.y + Rsh.y) / 2;
-    const shMidX = (Lsh.x + Rsh.x) / 2;
+    const shY = (Lsh.y + Rsh.y) / 2, shMidX = (Lsh.x + Rsh.x) / 2;
     const shW = Math.abs(Lsh.x - Rsh.x) || 0.02;
-    const vUnit = Math.max(0.05, shY - nose.y);   // ~ head height
+    const u = Math.max(0.05, shY - nose.y);
 
-    const wristsAbove = Lwr.y < nose.y - 0.02 && Rwr.y < nose.y - 0.02;
-    const elbowsUp = Lel.y < shY + 0.02 && Rel.y < shY + 0.02;
-    if (wristsAbove && elbowsUp) return "OVERHEAD";
+    const above = Lwr.y < nose.y - 0.02 && Rwr.y < nose.y - 0.02;
+    if (above && Lel.y < shY + 0.03 && Rel.y < shY + 0.03) return "OVERHEAD";
 
     const spread = Math.abs(Lwr.x - Rwr.x);
-    const wristsLevel = Math.abs(Lwr.y - shY) < vUnit * 1.1 && Math.abs(Rwr.y - shY) < vUnit * 1.1;
-    const elbowsLevel = Lel.y < shY + vUnit * 0.7 && Rel.y < shY + vUnit * 0.7;
-    if (!wristsAbove && wristsLevel && elbowsLevel && spread > shW * 2.3) return "SIDE";
+    if (!above && Math.abs(Lwr.y - shY) < u * 1.15 && Math.abs(Rwr.y - shY) < u * 1.15 &&
+        Lel.y < shY + u * 0.8 && Rel.y < shY + u * 0.8 && spread > shW * 2.2) return "SIDE";
 
-    const chestLo = shY + vUnit * 0.15, chestHi = shY + vUnit * 2.4;
-    const wristsChest = Lwr.y > chestLo && Lwr.y < chestHi && Rwr.y > chestLo && Rwr.y < chestHi;
-    const crossed = (Rwr.x - Lwr.x) > shW * 0.15;             // hands swapped sides
-    const centered = Math.abs(Lwr.x - shMidX) < shW * 1.2 && Math.abs(Rwr.x - shMidX) < shW * 1.2;
-    if (wristsChest && crossed && centered) return "CROSS";
+    const chestLo = shY + u * 0.15, chestHi = shY + u * 2.5;
+    const wc = Lwr.y > chestLo && Lwr.y < chestHi && Rwr.y > chestLo && Rwr.y < chestHi;
+    const crossed = (Rwr.x - Lwr.x) > shW * 0.15;
+    const centered = Math.abs(Lwr.x - shMidX) < shW * 1.25 && Math.abs(Rwr.x - shMidX) < shW * 1.25;
+    if (wc && crossed && centered) return "CROSS";
 
-    const waistLo = shY + vUnit * 1.5;
-    const wristsLow = Lwr.y > waistLo && Rwr.y > waistLo;
-    const notWide = Math.abs(Lwr.x - Rwr.x) < shW * 2.1;
-    if (wristsLow && notWide && !crossed) return "LOWER";
-
+    if (Lwr.y > shY + u * 1.45 && Rwr.y > shY + u * 1.45 && Math.abs(Lwr.x - Rwr.x) < shW * 2.1 && !crossed) return "LOWER";
     return null;
   }
   function currentPose() {
-    // majority of recent frames (reduces flicker)
-    if (poseHist.length === 0) return null;
-    const cnt = {};
-    for (const p of poseHist) if (p) cnt[p] = (cnt[p] || 0) + 1;
-    let best = null, n = 0;
-    for (const k in cnt) if (cnt[k] > n) { n = cnt[k]; best = k; }
+    if (!poseHist.length) return null;
+    const c = {}; for (const p of poseHist) if (p) c[p] = (c[p] || 0) + 1;
+    let best = null, n = 0; for (const k in c) if (c[k] > n) { n = c[k]; best = k; }
     return n >= Math.ceil(poseHist.length * 0.4) ? best : null;
   }
 
-  // =========================================================================
-  //  MediaPipe Pose + camera
-  // =========================================================================
-  let pose = null, mpCamera = null, mpReady = false;
+  // =====================================================================
+  //  MediaPipe
+  // =====================================================================
+  let pose = null, mpCamera = null, mpReady = false, loadTO = null;
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-
-  let loadTimeout = null;
   function onResults(res) {
     landmarks = res.poseLandmarks || null;
-    const p = classify(landmarks);
-    poseHist.push(p); if (poseHist.length > 7) poseHist.shift();
-    if (!mpReady) { mpReady = true; clearTimeout(loadTimeout); onModelReady(); }
+    poseHist.push(classify(landmarks)); if (poseHist.length > 7) poseHist.shift();
+    if (!mpReady) { mpReady = true; clearTimeout(loadTO); resize(); GS.phase = "ready"; show(scrReady); hide(scrLoad); }
   }
-
   async function boot() {
-    show(scrLoad); hide(scrMenu);
-    $("loadErr").hidden = true; $("btnRetry").hidden = true;
+    show(scrLoad); hide(scrMenu); $("loadErr").hidden = true; $("btnRetry").hidden = true;
     $("loadMsg").textContent = "カメラを起動中…";
-    clearTimeout(loadTimeout);
-    loadTimeout = setTimeout(() => {
-      if (!mpReady) showError("AIモデルの読み込みに時間がかかっています。通信環境を確認して、もう一度お試しください。");
-    }, 25000);
+    clearTimeout(loadTO);
+    loadTO = setTimeout(() => { if (!mpReady) showError("AIモデルの読み込みに時間がかかっています。通信環境を確認して、もう一度お試しください。"); }, 25000);
     try {
       if (typeof Pose === "undefined" || typeof Camera === "undefined")
         throw new Error("MediaPipe の読み込みに失敗しました（ネットワーク／広告ブロッカーをご確認ください）");
-
       pose = new Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635988162/${f}` });
-      pose.setOptions({
-        modelComplexity: isMobile ? 0 : 1,
-        smoothLandmarks: true,
-        enableSegmentation: false,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
+      pose.setOptions({ modelComplexity: isMobile ? 0 : 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
       pose.onResults(onResults);
-
       $("loadMsg").textContent = "AI（骨格認識）を準備中…";
-      mpCamera = new Camera(video, {
-        onFrame: async () => { try { await pose.send({ image: video }); } catch (e) {} },
-        facingMode: "user",
-        width: isMobile ? 480 : 640,
-        height: isMobile ? 360 : 480,
-      });
+      mpCamera = new Camera(video, { onFrame: async () => { try { await pose.send({ image: video }); } catch (e) {} }, facingMode: "user", width: isMobile ? 480 : 640, height: isMobile ? 360 : 480 });
       await mpCamera.start();
     } catch (err) {
       showError(err && err.name === "NotAllowedError"
-        ? "カメラの使用が許可されませんでした。ブラウザの設定でこのサイトのカメラを許可してください。"
+        ? "カメラの使用が許可されませんでした。ブラウザ設定でこのサイトのカメラを許可してください。"
         : (err && err.message) || "カメラまたはAIの初期化に失敗しました。");
     }
   }
-  function showError(msg) {
-    const e = $("loadErr"); e.hidden = false; e.textContent = msg;
-    $("btnRetry").hidden = false;
-    $("loadMsg").textContent = "";
-  }
-  function onModelReady() {
-    resize();
-    show(scrReady); hide(scrLoad);
-  }
+  function showError(m) { const e = $("loadErr"); e.hidden = false; e.textContent = m; $("btnRetry").hidden = false; $("loadMsg").textContent = ""; }
 
-  // =========================================================================
+  // =====================================================================
   //  Game
-  // =========================================================================
+  // =====================================================================
+  const YOU_Z = 0.9, LEAD = [{ z: 6, x: -0.32 }, { z: 9.5, x: 0.30 }, { z: 13.5, x: -0.12 }];
+  const SPAWN_Z = 26;
   const GS = {
-    phase: "menu",         // menu | ready | playing | over
-    score: 0, lives: 3, cleared: 0,
-    wall: null,            // { need, shown, decoy, feint, t0, dur, combo }
-    nextAt: 0,
-    particles: [],
-    shake: 0, flash: 0, flashColor: "255,255,255",
-    lastPoseName: null,
+    phase: "menu", score: 0, lives: 3, cleared: 0,
+    wall: null, nextAt: 0, scroll: 0, runPhase: 0, tumble: 0, comboLeft: 0,
+    particles: [], shake: 0, flash: 0, flashCol: "255,255,255",
   };
+  function tier() { const n = GS.cleared; return n <= 5 ? 0 : n <= 15 ? 1 : n <= 30 ? 2 : 3; }
+  function wallDur() { return [3.2, 2.4, 1.8, 1.3][tier()]; }
+  function targetBpm() { return [140, 152, 163, 172][tier()]; }
+  function runSpeed() { return 5.5 + tier() * 2.4; }
 
-  function wallDur(n) {
-    if (n <= 5) return 3.5;
-    if (n <= 15) return 2.5;
-    if (n <= 30) return 1.8;
-    return 1.2;
-  }
-  function pickPose(not) {
-    let p; do { p = POSES[(Math.random() * 4) | 0]; } while (p === not);
-    return p;
-  }
-  let comboLeft = 0;
+  function pickPose(not) { let p; do { p = POSES[(Math.random() * 4) | 0]; } while (p === not); return p; }
   function spawnWall(now) {
-    const n = GS.cleared;
-    const prev = GS.wall ? GS.wall.need : null;
-    const need = pickPose(prev);
-    let dur = wallDur(n);
-    const feintChance = n > 15 ? Math.min(0.55, (n - 15) * 0.045) : 0;
-    const feint = Math.random() < feintChance;
-    if (comboLeft <= 0 && n > 20 && Math.random() < Math.min(0.4, (n - 20) * 0.03)) comboLeft = 1 + ((Math.random() * 2) | 0);
+    const need = pickPose(GS.wall ? GS.wall.need : null);
+    let dur = wallDur();
+    const fchance = GS.cleared > 15 ? Math.min(0.55, (GS.cleared - 15) * 0.045) : 0;
+    const feint = Math.random() < fchance;
+    if (GS.comboLeft <= 0 && GS.cleared > 20 && Math.random() < Math.min(0.4, (GS.cleared - 20) * 0.03)) GS.comboLeft = 1 + ((Math.random() * 2) | 0);
     let combo = false;
-    if (comboLeft > 0) { comboLeft--; combo = true; dur *= 0.82; }
-    GS.wall = {
-      need, decoy: feint ? pickPose(need) : need, feint,
-      shown: feint ? null : need,
-      t0: now, dur, combo,
-    };
-    hNeed.textContent = feint ? "？？？" : POSE_JP[need];
+    if (GS.comboLeft > 0) { GS.comboLeft--; combo = true; dur *= 0.82; }
+    GS.wall = { need, decoy: feint ? pickPose(need) : need, feint, shown: feint ? pickPose(need) : need, t0: now, dur, combo, npc: 0 };
+    turnName.textContent = feint ? "？？？" : POSE_JP[need];
   }
-
   function resolveWall(now) {
-    const w = GS.wall;
-    const you = currentPose();
-    const ok = you === w.need;
-    if (ok) {
+    const w = GS.wall; GS.wall = null;
+    if (currentPose() === w.need) {
       GS.cleared++;
-      const tier = w.dur <= 1.25 ? 4 : w.dur <= 1.85 ? 3 : w.dur <= 2.55 ? 2 : 1;
-      GS.score += 100 * tier + (w.combo ? 120 : 0);
-      GS.shake = Math.min(28, 16 + tier * 3);
-      GS.flash = 1; GS.flashColor = "255,255,255";
-      shatter();
-      boom();
+      const tb = 100 * (tier() + 1) + (w.combo ? 150 : 0);
+      GS.score += tb;
+      GS.shake = 20 + tier() * 4; GS.flash = 1; GS.flashCol = "255,255,255";
+      shatter(); boom();
       flashMsg(w.combo ? "COMBO!!" : SHOUTS[(Math.random() * SHOUTS.length) | 0], "#ffd23f");
-      const t = wallDur(GS.cleared);
-      bpm = t <= 1.25 ? 160 : t <= 1.85 ? 150 : t <= 2.55 ? 140 : 130;
+      bpm = targetBpm();
     } else {
       GS.lives--;
-      GS.shake = 22;
-      GS.flash = 1; GS.flashColor = "255,40,40";
-      splat();
-      flashMsg(["CRASH!!", "ﾍﾞｼｬｯ…", "ﾑﾘｨ!!", "ﾎﾈｵﾚﾀ…"][(Math.random() * 4) | 0], "#ff4040");
+      GS.shake = 24; GS.flash = 1; GS.flashCol = "255,50,40";
+      splat(); GS.tumble = 0.001;
+      flashMsg(FAILS[(Math.random() * FAILS.length) | 0], "#ff5040");
     }
     syncHud();
-    GS.wall = null;
-    if (GS.lives <= 0) { gameOver(); return; }
-    GS.nextAt = now + (comboLeft > 0 ? 0.2 : 0.55);
+    if (GS.lives <= 0) return gameOver();
+    GS.nextAt = now + (GS.tumble > 0 ? 1.15 : (GS.comboLeft > 0 ? 0.35 : 0.9));
   }
-
   function shatter() {
-    const cx = game.width / 2, cy = game.height / 2, sc = DPR;
-    for (let i = 0; i < 46; i++) {
-      const a = Math.random() * Math.PI * 2, sp = (4 + Math.random() * 12);
-      GS.particles.push({
-        x: cx + (Math.random() - 0.5) * 160 * sc, y: cy + (Math.random() - 0.5) * 160 * sc,
-        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 3,
-        rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4,
-        s: 8 + Math.random() * 26, life: 1,
-      });
+    const W = game.width, H = game.height, cx = W / 2, cy = H * 0.52;
+    for (let i = 0; i < 54; i++) {
+      const a = Math.random() * 6.28, sp = (5 + Math.random() * 15) * DPR;
+      GS.particles.push({ x: cx + (Math.random() - 0.5) * W * 0.5, y: cy + (Math.random() - 0.5) * H * 0.3,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4 * DPR, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.5,
+        s: (7 + Math.random() * 26), life: 1 });
     }
   }
-
   function startGame() {
     initAudio(); if (ac.state === "suspended") ac.resume();
-    GS.phase = "playing"; GS.score = 0; GS.lives = 3; GS.cleared = 0;
-    GS.wall = null; GS.particles = []; GS.shake = 0; GS.flash = 0;
-    comboLeft = 0; bpm = 130;
+    Object.assign(GS, { phase: "playing", score: 0, lives: 3, cleared: 0, wall: null, scroll: 0, runPhase: 0, tumble: 0, comboLeft: 0, particles: [], shake: 0, flash: 0 });
+    bpm = targetBpm(); setBgmMode("play"); startBGM("play");
     hide(scrReady); hide(scrOver); hud.hidden = false;
     buildLives(); syncHud();
-    bpm = 130; setBgmMode("play"); startBGM("play");
-    GS.nextAt = performance.now() / 1000 + 1.0;
+    GS.nextAt = performance.now() / 1000 + 1.4;
   }
   function gameOver() {
-    GS.phase = "over"; bpm = 120; setBgmMode("menu");
+    GS.phase = "over"; bpm = 128; setBgmMode("menu");
     $("overStat").innerHTML = `突破した壁 <b style="color:#ffd23f">${GS.cleared}</b> &nbsp;/&nbsp; SCORE <b style="color:#ffd23f">${GS.score}</b>`;
-    setTimeout(() => { hud.hidden = true; show(scrOver); }, 700);
+    setTimeout(() => { hud.hidden = true; show(scrOver); }, 900);
   }
-
-  // ---- HUD ----
-  function buildLives() {
-    hLives.innerHTML = "";
-    for (let i = 0; i < 3; i++) { const d = document.createElement("div"); d.className = "can"; hLives.appendChild(d); }
-  }
-  function syncHud() {
-    hScore.textContent = GS.score;
-    hWalls.textContent = GS.cleared;
-    [...hLives.children].forEach((c, i) => c.classList.toggle("lost", i >= GS.lives));
-  }
-  let flashTimer = null;
-  function flashMsg(txt, color) {
-    hFlash.textContent = txt; hFlash.style.color = color;
+  function buildLives() { hLives.innerHTML = ""; for (let i = 0; i < 3; i++) { const d = document.createElement("div"); d.className = "can"; hLives.appendChild(d); } }
+  function syncHud() { hScore.textContent = GS.score; hWalls.textContent = GS.cleared; [...hLives.children].forEach((c, i) => c.classList.toggle("lost", i >= GS.lives)); }
+  let flashT = null;
+  function flashMsg(txt, col) {
+    hFlash.textContent = txt; hFlash.style.color = col;
     hFlash.classList.remove("show"); void hFlash.offsetWidth; hFlash.classList.add("show");
-    clearTimeout(flashTimer);
-    flashTimer = setTimeout(() => hFlash.classList.remove("show"), 700);
+    clearTimeout(flashT); flashT = setTimeout(() => hFlash.classList.remove("show"), 750);
   }
 
-  // =========================================================================
-  //  Rendering
-  // =========================================================================
+  function update(dt, now) {
+    GS.flash *= Math.pow(0.05, dt);
+    GS.shake *= Math.pow(0.02, dt);
+    if (GS.shake < 0.3) GS.shake = 0;
+    if (bpm < targetBpm() && GS.phase === "playing") bpm = Math.min(targetBpm(), bpm + dt * 6);
+
+    if (GS.phase === "ready") {
+      GS.runPhase += dt * 6; GS.scroll += dt * 5;
+    }
+    if (GS.phase === "playing") {
+      GS.runPhase += dt * (7 + tier() * 2.2);
+      GS.scroll += dt * runSpeed();
+      if (GS.tumble > 0) { GS.tumble = Math.min(1.4, GS.tumble + dt * 1.6); if (GS.tumble >= 1.4) GS.tumble = 0; }
+      if (!GS.wall && GS.tumble === 0 && now >= GS.nextAt) spawnWall(now);
+      if (GS.wall) {
+        const w = GS.wall, p = (now - w.t0) / w.dur;
+        // NPC bursts as the wall passes each one
+        for (let i = 0; i < LEAD.length; i++) {
+          const pz = 1 - (LEAD[i].z - YOU_Z) / (SPAWN_Z - YOU_Z);
+          if (w.npc <= i && p >= pz) { w.npc = i + 1; GS.shake = Math.max(GS.shake, 7); if (!muted && ac) kick(ac.currentTime, 0.5); }
+        }
+        w.shown = (w.feint && p < 0.82) ? w.decoy : w.need;
+        if (w.feint && p >= 0.82 && turnName.textContent === "？？？") turnName.textContent = POSE_JP[w.need];
+        if (p >= 1) resolveWall(now);
+      }
+    }
+
+    for (const pt of GS.particles) { pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.6 * DPR; pt.rot += pt.vr; pt.life -= dt * 1.1; }
+    GS.particles = GS.particles.filter(p => p.life > 0);
+  }
+
+  // =====================================================================
+  //  Rendering  (quarter-view perspective road + running crowd)
+  // =====================================================================
   let DPR = 1;
   function resize() {
     DPR = Math.min(2, window.devicePixelRatio || 1);
-    for (const cnv of [cam, game]) {
-      const r = cnv.getBoundingClientRect();
-      cnv.width = Math.max(2, Math.round(r.width * DPR));
-      cnv.height = Math.max(2, Math.round(r.height * DPR));
-    }
+    const gr = game.getBoundingClientRect();
+    game.width = Math.max(2, gr.width * DPR | 0); game.height = Math.max(2, gr.height * DPR | 0);
+    const cr = cam.getBoundingClientRect();
+    cam.width = Math.max(2, cr.width * DPR | 0); cam.height = Math.max(2, cr.height * DPR | 0);
   }
   window.addEventListener("resize", resize);
   window.addEventListener("orientationchange", () => setTimeout(resize, 250));
 
-  function drawCam() {
-    const cw = cam.width, ch = cam.height;
-    camCtx.save();
-    camCtx.clearRect(0, 0, cw, ch);
-    if (video.videoWidth) {
-      // cover-fit + mirror
-      const va = video.videoWidth / video.videoHeight, ca = cw / ch;
-      let dw = cw, dh = ch, dx = 0, dy = 0;
-      if (va > ca) { dh = ch; dw = ch * va; dx = (cw - dw) / 2; }
-      else { dw = cw; dh = cw / va; dy = (ch - dh) / 2; }
-      camCtx.translate(cw, 0); camCtx.scale(-1, 1);
-      camCtx.drawImage(video, dx, dy, dw, dh);
-      camCtx.restore();
-      // dark wash so overlays pop
-      camCtx.fillStyle = "rgba(6,8,14,0.32)"; camCtx.fillRect(0, 0, cw, ch);
-    } else {
-      camCtx.restore();
-      camCtx.fillStyle = "#000"; camCtx.fillRect(0, 0, cw, ch);
-    }
-
-    // skeleton overlay (mirror x to match displayed video)
-    if (landmarks) {
-      const va = video.videoWidth / video.videoHeight, ca = cw / ch;
-      let dw = cw, dh = ch, dx = 0, dy = 0;
-      if (va > ca) { dh = ch; dw = ch * va; dx = (cw - dw) / 2; }
-      else { dw = cw; dh = cw / va; dy = (ch - dh) / 2; }
-      const P = i => {
-        const l = landmarks[i];
-        return { x: cw - (dx + l.x * dw), y: dy + l.y * dh, v: vis(l) };
-      };
-      const seg = (a, b) => {
-        const p = P(a), q = P(b); if (!p.v || !q.v) return;
-        camCtx.beginPath(); camCtx.moveTo(p.x, p.y); camCtx.lineTo(q.x, q.y); camCtx.stroke();
-      };
-      camCtx.lineWidth = Math.max(4, cw * 0.012); camCtx.lineCap = "round";
-      camCtx.strokeStyle = "rgba(53,224,127,0.9)";
-      camCtx.shadowColor = "rgba(53,224,127,0.9)"; camCtx.shadowBlur = 12;
-      seg(11, 12); seg(11, 13); seg(13, 15); seg(12, 14); seg(14, 16);
-      camCtx.shadowBlur = 0;
-      for (const i of [0, 11, 12, 13, 14, 15, 16]) {
-        const p = P(i); if (!p.v) continue;
-        camCtx.fillStyle = (i >= 15) ? "#ffd23f" : "#35e07f";
-        camCtx.beginPath(); camCtx.arc(p.x, p.y, camCtx.lineWidth * 0.9, 0, 7); camCtx.fill();
-      }
-    }
+  function scaleOf(z) { return 3.4 / (3.4 + Math.max(-1.5, z)); }
+  // drawBuff `s` so the figure is `frac` of canvas height when at the player's depth
+  function figScale(sc, frac) { return game.height * (frac || 0.5) * (sc / scaleOf(YOU_Z)) / 224; }
+  function project(z, worldX) {
+    const W = game.width, H = game.height;
+    const horY = H * 0.30, botY = H * 1.02;
+    const sc = scaleOf(z);
+    const y = horY + (botY - horY) * sc;
+    const roadHalf = (W * 0.06 + (W * 0.72 - W * 0.06) * sc);
+    const x = W / 2 + worldX * roadHalf * 2;
+    return { x, y, sc, roadHalf };
   }
 
-  function drawGame(now) {
+  function drawScene(now) {
     const W = game.width, H = game.height;
-    gctx.setTransform(1, 0, 0, 1, 0, 0);
-    gctx.clearRect(0, 0, W, H);
-
-    // shake
+    const horY = H * 0.30;
+    g.setTransform(1, 0, 0, 1, 0, 0);
     let ox = 0, oy = 0;
-    if (GS.shake > 0.4) {
-      ox = (Math.random() - 0.5) * GS.shake * DPR;
-      oy = (Math.random() - 0.5) * GS.shake * DPR;
-      GS.shake *= 0.86;
-    } else GS.shake = 0;
-    gctx.translate(ox, oy);
+    if (GS.shake > 0) { ox = (Math.random() - 0.5) * GS.shake * DPR; oy = (Math.random() - 0.5) * GS.shake * DPR; }
+    g.translate(ox, oy);
+    const M = 50;
 
-    const cx = W / 2, cy = H / 2;
-    const unit = Math.min(W, H);
+    g.fillStyle = "#141118"; g.fillRect(-M, -M, W + 2 * M, H + 2 * M);   // off-road void
 
-    if (GS.phase === "playing" && GS.wall) {
-      const w = GS.wall;
-      let p = (now - w.t0) / w.dur;
-      if (p >= 1) { resolveWall(now); }
-      else {
-        // decide shown pose (feint swap in the last ~28%)
-        w.shown = (w.feint && p < 0.72) ? w.decoy : w.need;
-        if (w.feint && p >= 0.72 && hNeed.textContent === "？？？") hNeed.textContent = POSE_JP[w.need];
+    // sky — collapsing-factory glow
+    let sky = g.createLinearGradient(0, -M, 0, horY);
+    sky.addColorStop(0, "#3a1c0a"); sky.addColorStop(0.6, "#7a2f10"); sky.addColorStop(1, "#e0651f");
+    g.fillStyle = sky; g.fillRect(-M, -M, W + 2 * M, horY + M);
+    // distant smoke puffs
+    g.fillStyle = "rgba(20,12,8,0.5)";
+    for (let i = 0; i < 5; i++) {
+      const px = ((i * 173 + now * 6) % (W + 200)) - 100;
+      g.beginPath(); g.arc(px, horY * (0.3 + (i % 3) * 0.18), 40 + i * 8, 0, 7); g.fill();
+    }
 
-        const grow = Math.pow(p, 1.8);
-        const slabW = W * (0.16 + grow * 1.35);
-        const slabH = H * (0.16 + grow * 1.35);
-        const figS = (Math.min(slabW, slabH) / MACHO_SPAN) * 0.86;
-        const figImpact = (Math.min(W, H) * 1.51 / MACHO_SPAN) * 0.86;
+    // road
+    const near = project(YOU_Z - 0.6, 0), far = project(SPAWN_Z + 8, 0);
+    g.fillStyle = "#26262c";
+    g.beginPath();
+    g.moveTo(W / 2 - far.roadHalf, far.y); g.lineTo(W / 2 + far.roadHalf, far.y);
+    g.lineTo(W / 2 + near.roadHalf, near.y); g.lineTo(W / 2 - near.roadHalf, near.y);
+    g.closePath(); g.fill();
+    // ground rungs scrolling toward camera
+    const SP = 2.2;
+    for (let i = 0; i < 26; i++) {
+      const z = SPAWN_Z + 6 - ((i * SP + (GS.scroll % SP)));
+      if (z < YOU_Z - 0.6) continue;
+      const pr = project(z, 0);
+      g.fillStyle = (Math.floor((z) / SP + GS.scroll / SP) % 2) ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.16)";
+      g.fillRect(W / 2 - pr.roadHalf, pr.y - Math.max(1, 5 * pr.sc), pr.roadHalf * 2, Math.max(1, 10 * pr.sc));
+    }
+    // roadside hazard poles
+    for (let i = 0; i < 14; i++) {
+      const z = SPAWN_Z + 6 - ((i * 3.4 + (GS.scroll % 3.4)));
+      if (z < YOU_Z) continue;
+      for (const sgn of [-1, 1]) {
+        const pr = project(z, sgn * 0.62);
+        const h = 60 * pr.sc;
+        g.fillStyle = "#ffd23f"; g.fillRect(pr.x - 3 * pr.sc, pr.y - h, 6 * pr.sc, h);
+        g.fillStyle = "#111"; g.fillRect(pr.x - 3 * pr.sc, pr.y - h, 6 * pr.sc, h / 2);
+      }
+    }
 
-        // faint impact-size silhouette guide — line your body up with this
-        gctx.save(); gctx.globalAlpha = 0.12;
-        drawMacho(gctx, w.need, cx, cy, figImpact, "#ffffff");
-        gctx.restore();
+    // --- draw entities sorted far -> near ---
+    const ents = [];
+    for (let i = LEAD.length - 1; i >= 0; i--) ents.push({ z: LEAD[i].z, kind: "npc", i });
+    if (GS.wall) {
+      const w = GS.wall, p = (now - w.t0) / w.dur;
+      const wz = SPAWN_Z - (SPAWN_Z - YOU_Z) * p;
+      ents.push({ z: wz, kind: "wall", p });
+    }
+    ents.push({ z: YOU_Z, kind: "you" });
+    ents.sort((a, b) => b.z - a.z);
 
-        // ---- the concrete slab ----
-        const sx0 = cx - slabW / 2, sy0 = cy - slabH / 2;
-        const grd = gctx.createLinearGradient(sx0, sy0, sx0 + slabW, sy0 + slabH);
-        grd.addColorStop(0, "#8a8a90"); grd.addColorStop(0.5, "#a6a6ad"); grd.addColorStop(1, "#6e6e75");
-        const bt = Math.max(10 * DPR, slabW * 0.045);
-
-        gctx.save();
-        roundRect(gctx, sx0, sy0, slabW, slabH, 16 * DPR);
-        gctx.clip();
-        // hazard stripe frame (fills whole, then centre is covered back over)
-        gctx.lineWidth = bt * 1.1;
-        for (let i = -slabH; i < slabW + slabH; i += bt * 2) {
-          gctx.strokeStyle = (((i + slabH) / (bt * 2)) | 0) % 2 ? "#141414" : "#ffd23f";
-          gctx.beginPath();
-          gctx.moveTo(sx0 + i, sy0 - 6);
-          gctx.lineTo(sx0 + i + slabH + 12, sy0 + slabH + 6);
-          gctx.stroke();
-        }
-        // concrete centre
-        roundRect(gctx, sx0 + bt, sy0 + bt, slabW - bt * 2, slabH - bt * 2, 10 * DPR);
-        gctx.fillStyle = grd; gctx.fill();
-        gctx.strokeStyle = "rgba(0,0,0,0.4)"; gctx.lineWidth = 2 * DPR; gctx.stroke();
-        // cracks on the centre
-        gctx.strokeStyle = "rgba(0,0,0,0.22)"; gctx.lineWidth = 2 * DPR;
-        for (let i = 0; i < 5; i++) {
-          gctx.beginPath();
-          let px = sx0 + (i + 0.5) / 5 * slabW, py = sy0 + bt;
-          gctx.moveTo(px, py);
-          for (let k = 0; k < 4; k++) { px += Math.sin(i * 3 + k * 1.7) * slabW * 0.11; py += (slabH - bt * 2) * 0.27; gctx.lineTo(px, py); }
-          gctx.stroke();
-        }
-        gctx.restore();
-
-        // yellow halo, then punch the person-shaped hole through to the camera
-        gctx.save(); gctx.globalAlpha = 0.92;
-        drawMacho(gctx, w.shown, cx, cy, figS * 1.09, "#ffd23f");
-        gctx.restore();
-        gctx.globalCompositeOperation = "destination-out";
-        drawMacho(gctx, w.shown, cx, cy, figS, "#000");
-        gctx.globalCompositeOperation = "source-over";
-
-        // gauge
-        hGauge.style.transform = `scaleX(${Math.max(0, 1 - p)})`;
-        hGauge.style.background = p > 0.75 ? "#ff4040" : p > 0.45 ? "#ffd23f" : "#35e07f";
+    for (const e of ents) {
+      if (e.kind === "npc") {
+        const L = LEAD[e.i], pr = project(L.z, L.x);
+        const w = GS.wall;
+        let mode = "RUN";
+        if (w) { const p = (now - w.t0) / w.dur; const pz = 1 - (L.z - YOU_Z) / (SPAWN_Z - YOU_Z); if (p > pz - 0.16 && p < pz + 0.12) mode = w.shown; }
+        const sN = figScale(pr.sc, 0.5);
+        drawBuff(g, mode, pr.x, pr.y - 118 * sN, sN, "#2b2b30", "#ff5e3a", GS.runPhase + e.i * 1.6);
+      } else if (e.kind === "wall") {
+        drawWall(e.p, now);
+      } else {
+        drawYou(now);
       }
     }
 
     // particles
     for (const pt of GS.particles) {
-      pt.x += pt.vx * DPR; pt.y += pt.vy * DPR; pt.vy += 0.5; pt.rot += pt.vr; pt.life -= 0.018;
-    }
-    GS.particles = GS.particles.filter(p => p.life > 0 && p.y < H + 60);
-    for (const pt of GS.particles) {
-      gctx.save(); gctx.translate(pt.x, pt.y); gctx.rotate(pt.rot);
-      gctx.fillStyle = `rgba(150,150,156,${Math.max(0, pt.life)})`;
-      gctx.fillRect(-pt.s / 2 * DPR, -pt.s / 2 * DPR, pt.s * DPR, pt.s * DPR);
-      gctx.restore();
+      g.save(); g.translate(pt.x, pt.y); g.rotate(pt.rot);
+      g.fillStyle = `rgba(140,140,148,${Math.max(0, pt.life)})`;
+      const s = pt.s * DPR; g.fillRect(-s / 2, -s / 2, s, s);
+      g.restore();
     }
 
     // flash
-    if (GS.flash > 0.02) {
-      gctx.fillStyle = `rgba(${GS.flashColor},${GS.flash * 0.6})`;
-      gctx.fillRect(-50, -50, W + 100, H + 100);
-      GS.flash *= 0.82;
-    }
+    if (GS.flash > 0.02) { g.fillStyle = `rgba(${GS.flashCol},${GS.flash * 0.6})`; g.fillRect(-60, -60, W + 120, H + 120); }
 
-    gctx.setTransform(1, 0, 0, 1, 0, 0);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  function drawWall(p, now) {
+    const W = game.width, H = game.height;
+    const w = GS.wall;
+    const wz = SPAWN_Z - (SPAWN_Z - YOU_Z) * p;
+    const pr = project(wz, 0);
+    const slabW = Math.min(W * 1.5, pr.roadHalf * 2.3 + W * 0.1);
+    const slabH = Math.min(H * 1.5, slabW * 0.9);
+    const cx = W / 2, cy = pr.y - slabH * 0.52;
+    const figS = Math.min(slabW, slabH) / SPAN * 0.86;
+
+    g.save();
+    const gx0 = cx - slabW / 2, gy0 = cy - slabH / 2;
+    roundRect(g, gx0, gy0, slabW, slabH, Math.min(14 * DPR, slabW * 0.2)); g.clip();
+    const bt = Math.min(slabW * 0.24, slabH * 0.24, Math.max(8 * DPR, slabW * 0.045));
+    g.lineWidth = bt * 1.1;
+    for (let i = -slabH; i < slabW + slabH; i += bt * 2) {
+      g.strokeStyle = (((i + slabH) / (bt * 2)) | 0) % 2 ? "#141414" : "#ffd23f";
+      g.beginPath(); g.moveTo(gx0 + i, gy0 - 6); g.lineTo(gx0 + i + slabH + 12, gy0 + slabH + 6); g.stroke();
+    }
+    const grd = g.createLinearGradient(gx0, gy0, gx0 + slabW, gy0 + slabH);
+    grd.addColorStop(0, "#8a8a90"); grd.addColorStop(0.5, "#a6a6ad"); grd.addColorStop(1, "#6e6e75");
+    roundRect(g, gx0 + bt, gy0 + bt, slabW - bt * 2, slabH - bt * 2, 10 * DPR);
+    g.fillStyle = grd; g.fill();
+    g.strokeStyle = "rgba(0,0,0,0.4)"; g.lineWidth = 2 * DPR; g.stroke();
+    g.strokeStyle = "rgba(0,0,0,0.2)"; g.lineWidth = 2 * DPR;
+    for (let i = 0; i < 5; i++) {
+      g.beginPath(); let px = gx0 + (i + 0.5) / 5 * slabW, py = gy0 + bt;
+      g.moveTo(px, py);
+      for (let k = 0; k < 4; k++) { px += Math.sin(i * 3 + k * 1.7) * slabW * 0.11; py += (slabH - bt * 2) * 0.27; g.lineTo(px, py); }
+      g.stroke();
+    }
+    g.restore();
+
+    // halo + punch person-hole (reveals road behind)
+    g.save(); g.globalAlpha = 0.9;
+    drawBuff(g, w.shown, cx, cy, figS * 1.09, "#ffd23f", "#ffd23f", 0);
+    g.restore();
+    g.globalCompositeOperation = "destination-out";
+    drawBuff(g, w.shown, cx, cy, figS, "#000", "#000", 0);
+    g.globalCompositeOperation = "source-over";
+  }
+
+  function drawYou(now) {
+    const W = game.width, H = game.height;
+    const pr = project(YOU_Z, 0.02);
+    let sc = figScale(pr.sc, 0.5);
+    let cx = pr.x, cy = pr.y - 118 * sc, rot = 0;
+    if (GS.tumble > 0) {
+      const tt = Math.min(1, GS.tumble);
+      cx += tt * W * 0.55; cy -= Math.sin(tt * Math.PI) * H * 0.4; rot = tt * 7; sc *= (1 - tt * 0.55);
+    }
+    const w = GS.wall;
+    let mode = "RUN";
+    if (w && GS.tumble === 0) {
+      const p = (now - w.t0) / w.dur;
+      if (p > 0.42) mode = currentPose() || "RUN";
+    }
+    g.save(); g.translate(cx, cy); g.rotate(rot);
+    // yellow outline so "you" pop
+    drawBuff(g, mode, 0, 0, sc * 1.1, "#ffe37a", "#ffe37a", GS.runPhase);
+    drawBuff(g, mode, 0, 0, sc, "#1f1f24", "#2f6bff", GS.runPhase);
+    g.restore();
   }
 
   function roundRect(c, x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
-    c.beginPath();
-    c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+    c.beginPath(); c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
     c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
   }
 
-  // =========================================================================
-  //  Main loop
-  // =========================================================================
-  function frame() {
-    const now = performance.now() / 1000;
+  function drawCam() {
+    const cw = cam.width, ch = cam.height;
+    camCtx.clearRect(0, 0, cw, ch);
+    if (!video.videoWidth) { camCtx.fillStyle = "#000"; camCtx.fillRect(0, 0, cw, ch); return; }
+    const va = video.videoWidth / video.videoHeight, caR = cw / ch;
+    let dw = cw, dh = ch, dx = 0, dy = 0;
+    if (va > caR) { dh = ch; dw = ch * va; dx = (cw - dw) / 2; } else { dw = cw; dh = cw / va; dy = (ch - dh) / 2; }
+    camCtx.save(); camCtx.translate(cw, 0); camCtx.scale(-1, 1);
+    camCtx.drawImage(video, dx, dy, dw, dh); camCtx.restore();
+    camCtx.fillStyle = "rgba(6,8,14,0.25)"; camCtx.fillRect(0, 0, cw, ch);
 
-    // "you" indicator
-    const you = currentPose();
-    hYou.textContent = you ? POSE_JP[you] : "—";
-    const w = GS.wall;
-    hYou.className = "v " + (w && you ? (you === w.need ? "ok" : "no") : "");
-
-    if (GS.phase === "playing") {
-      if (!GS.wall && now >= GS.nextAt) spawnWall(now);
+    if (landmarks) {
+      const P = i => { const l = landmarks[i]; return { x: cw - (dx + l.x * dw), y: dy + l.y * dh, v: vis(l) }; };
+      const seg = (a, b) => { const p = P(a), q = P(b); if (!p.v || !q.v) return; camCtx.beginPath(); camCtx.moveTo(p.x, p.y); camCtx.lineTo(q.x, q.y); camCtx.stroke(); };
+      camCtx.lineWidth = Math.max(3, cw * 0.02); camCtx.lineCap = "round";
+      camCtx.strokeStyle = "rgba(53,224,127,0.95)";
+      seg(11, 12); seg(11, 13); seg(13, 15); seg(12, 14); seg(14, 16);
+      for (const i of [0, 11, 12, 13, 14, 15, 16]) { const p = P(i); if (!p.v) continue; camCtx.fillStyle = i >= 15 ? "#ffd23f" : "#35e07f"; camCtx.beginPath(); camCtx.arc(p.x, p.y, camCtx.lineWidth, 0, 7); camCtx.fill(); }
     }
+  }
 
+  // "your pose" call-out
+  function updateTurnUI(now) {
+    const w = GS.wall;
+    let on = false, p = 0;
+    if (w && GS.phase === "playing" && GS.tumble === 0) { p = (now - w.t0) / w.dur; on = p >= 0.42; }
+    elTurn.classList.toggle("on", on);
+    if (on) {
+      turnIconCtx.clearRect(0, 0, 140, 140);
+      drawBuff(turnIconCtx, w.shown, 70, 74, 0.30, "#ffd23f", "#ffd23f", 0);
+      const gg = Math.max(0, Math.min(1, (1 - p) / 0.58));
+      turnBar.style.transform = `scaleX(${gg})`;
+      turnBar.style.background = gg < 0.25 ? "#ff4040" : gg < 0.55 ? "#ffd23f" : "#35e07f";
+      const you = currentPose();
+      turnYou.textContent = "あなた: " + (you ? POSE_JP[you] : "—");
+      turnYou.className = "you " + (you ? (you === w.need ? "ok" : "no") : "");
+    }
+  }
+
+  // =====================================================================
+  //  Loop
+  // =====================================================================
+  let last = 0;
+  function frame(ts) {
+    const now = ts / 1000;
+    const dt = Math.min(0.05, (now - last) || 0); last = now;
+    update(dt, now);
+    drawScene(now);
     drawCam();
-    drawGame(now);
+    updateTurnUI(now);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
-  // =========================================================================
-  //  Screen helpers + buttons
-  // =========================================================================
+  // =====================================================================
+  //  Screens + input
+  // =====================================================================
   function show(el) { el.hidden = false; }
   function hide(el) { el.hidden = true; }
 
-  $("btnAllow").addEventListener("click", () => { initAudio(); bpm = 118; startBGM("menu"); boot(); });
+  $("btnAllow").addEventListener("click", () => { initAudio(); bpm = 128; startBGM("menu"); boot(); });
   $("btnRetry").addEventListener("click", boot);
   $("btnStart").addEventListener("click", startGame);
-  $("btnAgain").addEventListener("click", () => { hide(scrOver); show(scrReady); });
+  $("btnAgain").addEventListener("click", () => { hide(scrOver); show(scrReady); GS.phase = "ready"; });
   $("btnMute").addEventListener("click", () => {
-    muted = !muted;
-    $("btnMute").innerHTML = muted ? "&#128263;" : "&#128266;";
+    muted = !muted; $("btnMute").innerHTML = muted ? "&#128263;" : "&#128266;";
     if (master) master.gain.value = muted ? 0 : 0.55;
   });
 
-  // build title macho SVGs + pose guide
-  $("menuMachos").innerHTML = svgMacho("shades") + svgMacho("can");
-  const guide = $("poseGuide");
-  const names = { OVERHEAD: "上・バンザイ", SIDE: "横・水平", LOWER: "下・腰", CROSS: "胸クロス" };
-  for (const p of POSES) {
-    const d = document.createElement("div");
-    const c = document.createElement("canvas"); c.width = 120; c.height = 120;
-    const cc = c.getContext("2d");
-    drawMacho(cc, p, 60, 66, 0.30, "#ffd23f");
-    d.innerHTML = `<img src="${c.toDataURL()}" style="width:100%;height:62px;object-fit:contain"><span>${names[p]}</span>`;
-    guide.appendChild(d);
-  }
+  // menu marching row + pose guide
+  (function buildMenu() {
+    const row = $("menuRow");
+    for (let i = 0; i < 3; i++) {
+      const c = document.createElement("canvas"); c.width = 120; c.height = 180;
+      drawBuff(c.getContext("2d"), "RUN", 60, 96, 0.34, "#2b2b30", "#ff5e3a", i * 1.7);
+      row.appendChild(c);
+    }
+    const names = { OVERHEAD: "上・バンザイ", SIDE: "横・水平", LOWER: "下・腰", CROSS: "胸クロス" };
+    const guide = $("poseGuide");
+    for (const pn of POSES) {
+      const d = document.createElement("div");
+      const c = document.createElement("canvas"); c.width = 120; c.height = 120;
+      drawBuff(c.getContext("2d"), pn, 60, 64, 0.28, "#ffd23f", "#ffd23f", 0);
+      d.innerHTML = `<img src="${c.toDataURL()}"><span>${names[pn]}</span>`;
+      guide.appendChild(d);
+    }
+  })();
 
   document.addEventListener("gesturestart", e => e.preventDefault());
   document.addEventListener("dblclick", e => e.preventDefault());
