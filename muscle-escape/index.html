@@ -17,8 +17,8 @@
 <meta name="google-adsense-account" content="ca-pub-8860612143084575">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
      crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; }
@@ -172,6 +172,7 @@
     <div class="poselist" id="poseGuide"></div>
     <button class="bigbtn" id="btnAllow">カメラを許可して行進スタート</button>
     <div class="hint">カメラ映像は端末内だけで処理され、どこにも送信されません。</div>
+    <div class="hint" id="ver" style="opacity:.55">build v3 — 読込中</div>
   </div>
 
   <div class="screen" id="scrLoad" hidden>
@@ -207,6 +208,7 @@
   function fatal(m) { shownErr = true; errbar.style.display = "block"; errbar.textContent = "⚠ " + m; }
   window.addEventListener("error", e => { if (!shownErr) fatal((e.message || e.error || "script error") + "  @" + String(e.filename || "").split("/").pop() + ":" + e.lineno); });
   window.addEventListener("unhandledrejection", e => { if (!shownErr) fatal("promise: " + (e.reason && (e.reason.message || e.reason))); });
+  { const v = document.getElementById("ver"); if (v) v.textContent = "build v3 — スクリプトOK"; }
 
   const $ = id => document.getElementById(id);
   const video = $("cam-video");
@@ -406,21 +408,32 @@
     poseHist.push(classify(landmarks)); if (poseHist.length > 7) poseHist.shift();
     if (!mpReady) { mpReady = true; clearTimeout(loadTO); resize(); GS.phase = "ready"; show(scrReady); hide(scrLoad); }
   }
+  function loadScript(src) {
+    return new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = src; s.onload = () => res();
+      s.onerror = () => rej(new Error("スクリプト読み込み失敗: " + src.split("/").pop()));
+      document.head.appendChild(s);
+    });
+  }
   let camFrames = 0;
   async function boot() {
     show(scrLoad); hide(scrMenu); $("loadErr").hidden = true; $("btnRetry").hidden = true;
     camFrames = 0;
-    $("loadMsg").textContent = "カメラの許可を待っています…";
+    $("loadMsg").textContent = "ライブラリを読み込み中…";
     clearTimeout(loadTO);
     loadTO = setTimeout(() => {
       if (!mpReady) showError(camFrames > 3
         ? "カメラは動作していますが、AIモデルの読み込みが終わりません。通信環境／広告ブロッカーをご確認のうえ、もう一度お試しください。"
         : "カメラを取得できませんでした。ブラウザのカメラ許可設定と、他アプリがカメラを使っていないかご確認ください。");
-    }, 20000);
+    }, 22000);
     try {
-      if (typeof Pose === "undefined") throw new Error("MediaPipe(pose) を読み込めません。広告ブロッカー/ネットワークをご確認ください。");
-      if (typeof Camera === "undefined") throw new Error("MediaPipe(camera_utils) を読み込めません。広告ブロッカー/ネットワークをご確認ください。");
+      if (typeof Camera === "undefined") await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js");
+      if (typeof Pose === "undefined") await loadScript("https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js");
+      if (typeof Pose === "undefined" || typeof Camera === "undefined")
+        throw new Error("MediaPipe を読み込めませんでした。広告ブロッカーや通信制限で cdn.jsdelivr.net がブロックされていないかご確認ください。");
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("このブラウザ/接続ではカメラを使用できません（HTTPS必須）。");
+      $("loadMsg").textContent = "カメラの許可を待っています…";
 
       pose = new Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${f}` });
       pose.setOptions({ modelComplexity: isMobile ? 0 : 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
