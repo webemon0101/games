@@ -33,7 +33,7 @@
   /* ---- 80s toy cabinet ---- */
   .cabinet {
     position: relative;
-    width: min(94vw, 72vh, 430px);
+    width: min(94vw, 58vh, 420px);
     background: linear-gradient(#b7ead9, #86d4bf 52%, #57b49c);
     border-radius: 30px / 26px;
     padding: 20px 18px 18px;
@@ -482,7 +482,7 @@
     for (let k = 0; k <= 48; k++) {
       const s = (k / 48) * 6;
       const i = Math.floor(s) % 6, f = s - Math.floor(s);
-      const a = ballAt(i, 1), b = ballAt((i + 1) % 6, 1);
+      const a = STATIONS[i], b = STATIONS[(i + 1) % 6];
       const x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f;
       k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
     }
@@ -581,6 +581,7 @@
   window.addEventListener("keydown", e => {
     const k = e.key.toLowerCase();
     if (["arrowleft", "arrowright", "a", "d", " "].includes(k)) e.preventDefault();
+    if (e.repeat) return;
     if (k === "arrowleft" || k === "a") cycleLeft();
     else if (k === "arrowright" || k === "d") cycleRight();
     else if (k === "1") startGame("A");
