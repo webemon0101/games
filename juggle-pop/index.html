@@ -118,6 +118,15 @@
   #ov:not(.hide) #ovTitle{ animation:ovp 1s steps(1,end) infinite; }
   @keyframes ovp{ 50%{opacity:.35} }
   #ovMsg{ font-size:12px; white-space:pre-line; line-height:1.7; }
+  #shareBtn{
+    pointer-events:auto; cursor:pointer; margin-top:4px;
+    font-family:"Courier New",monospace; font-weight:800; font-size:12px; letter-spacing:1px;
+    color:#173021; background:linear-gradient(#bfe6a8,#7dc65e);
+    border:2px solid #173021; border-radius:4px; padding:6px 12px;
+    box-shadow:2px 2px 0 rgba(10,20,10,.5);
+  }
+  #shareBtn[hidden]{ display:none; }
+  #shareBtn:active{ transform:translate(1px,1px); box-shadow:1px 1px 0 rgba(10,20,10,.5); }
 
   .pad{ display:flex; justify-content:space-around; align-items:center; margin-top:16px; }
   .rbtn{
@@ -155,6 +164,7 @@
         <div id="ov">
           <div id="ovTitle">JUGGLE POP</div>
           <div id="ovMsg"></div>
+          <button id="shareBtn" hidden>X でスコアをシェア</button>
         </div>
       </div>
     </div>
@@ -388,9 +398,30 @@ function interval(){
 }
 
 /* ============ overlay ============ */
-var ovEl=$("ov"), ovTitle=$("ovTitle"), ovMsg=$("ovMsg");
-function ov(title,msg){ ovTitle.textContent=title; ovMsg.textContent=msg; ovEl.classList.remove("hide"); }
+var ovEl=$("ov"), ovTitle=$("ovTitle"), ovMsg=$("ovMsg"), shareBtn=$("shareBtn");
+function ov(title,msg){ ovTitle.textContent=title; ovMsg.textContent=msg; ovEl.classList.remove("hide"); shareBtn.hidden=true; }
 function hideOv(){ ovEl.classList.add("hide"); }
+
+/* ============ X score share ============ */
+var GAME_URL="https://webemon0101.github.io/games/juggle-pop/";
+function rankTitle(){
+  var n = (mode==="B") ? Math.floor(score/10) : score;   // ~ number of catches
+  if(n>=150) return "伝説のジャグルマスター";
+  if(n>=50)  return "サーカスの花形";
+  if(n>=15)  return "ストリートの芸人";
+  return "かけだしジャグラー";
+}
+function shareURL(){
+  var text="JUGGLE POP (GAME "+mode+")\nスコア "+score+" ／ 称号「"+rankTitle()+"」";
+  return "https://twitter.com/intent/tweet"
+    + "?text=" + encodeURIComponent(text)
+    + "&url="  + encodeURIComponent(GAME_URL)
+    + "&hashtags=" + encodeURIComponent("ジャグルポップ,レトロゲーム");
+}
+shareBtn.addEventListener("click",function(e){
+  e.stopPropagation();
+  window.open(shareURL(), "_blank", "noopener");
+});
 
 function showCrush(side){
   var g=crushEl[side];
@@ -521,7 +552,8 @@ function gameOver(){
     hi[mode]=score;
     try{ localStorage.setItem("jpop_hi_"+mode,String(score)); }catch(e){}
   }
-  ov("GAME OVER","SCORE  "+pad4(score)+"      HI  "+pad4(hi[mode])+"\n▶  GAME A  /  GAME B");
+  ov("GAME OVER","称号「"+rankTitle()+"」\nSCORE  "+pad4(score)+"    HI  "+pad4(hi[mode])+"\n▶  GAME A  /  GAME B");
+  shareBtn.hidden=false;
   render();
 }
 
