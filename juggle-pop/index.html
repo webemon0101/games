@@ -12,592 +12,652 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#7fd0ba">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#b8352a">
 <title>JUGGLE POP — LCD GAME</title>
 <meta name="google-adsense-account" content="ca-pub-8860612143084575">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
      crossorigin="anonymous"></script>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; }
-  body {
-    background: radial-gradient(circle at 50% 25%, #3b5a54, #17262b 72%);
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100dvh; padding: 10px;
-    font-family: "Courier New", ui-monospace, monospace;
-    touch-action: manipulation;
-    -webkit-user-select: none; user-select: none;
-    overflow: hidden;
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; }
+  body{
+    background:radial-gradient(circle at 50% 22%, #3d5b54, #16232a 74%);
+    min-height:100dvh; overflow:hidden;
+    font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+    touch-action:manipulation;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
   }
 
-  /* ---- 80s toy cabinet ---- */
-  .cabinet {
-    position: relative;
-    width: min(94vw, 58vh, 420px);
-    background: linear-gradient(#b7ead9, #86d4bf 52%, #57b49c);
-    border-radius: 30px / 26px;
-    padding: 20px 18px 18px;
+  #stage{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+
+  #console{
+    width:360px; transform-origin:center center;
+    padding:16px 16px 20px;
+    border-radius:30px;
+    background:linear-gradient(160deg,#e05a4b 0%,#c53a2d 52%,#9e2a1f 100%);
     box-shadow:
-      inset 0 3px 5px rgba(255,255,255,.55),
-      inset 0 -12px 22px rgba(0,0,0,.22),
-      0 22px 45px rgba(0,0,0,.5);
-    border: 3px solid #ffd83d;
+      inset 0 3px 4px rgba(255,225,220,.55),
+      inset 0 -6px 14px rgba(70,0,0,.35),
+      0 20px 40px rgba(0,0,0,.45),
+      0 0 0 2px rgba(255,255,255,.12);
+    position:relative;
   }
-  .brand {
-    text-align: center; margin-bottom: 12px;
-    color: #1f5c4d;
-    font: 800 22px/1 "Courier New", monospace; letter-spacing: 2px;
-    text-shadow: 0 1px 0 rgba(255,255,255,.5);
-  }
-  .brand b { color: #e8632b; }
-  .brand small {
-    display: block; margin-top: 3px;
-    font-size: 9px; letter-spacing: 3px; color: #2b6b5b; opacity: .8;
+  #console::before{
+    content:""; position:absolute; inset:8px; border-radius:24px;
+    border:1px dashed rgba(90,0,0,.22); pointer-events:none;
   }
 
-  /* top control row */
-  .toprow { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; }
-  .toprow button {
-    border: none; cursor: pointer; color: #23312a;
-    font: 700 12px/1 "Courier New", monospace; letter-spacing: 1px;
-    padding: 9px 0; border-radius: 9px; flex: 1;
-    background: linear-gradient(#fff2c0, #ffd83d);
-    box-shadow: 0 3px 0 #c99a17, inset 0 1px 1px rgba(255,255,255,.6);
+  .topbar{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .brand{
+    flex:0 0 auto; background:#ffe23d; color:#8a1a0e;
+    font-weight:800; font-size:15px; letter-spacing:1px;
+    padding:5px 9px; border-radius:8px;
+    box-shadow:inset 0 -2px 0 rgba(0,0,0,.15), 0 2px 3px rgba(0,0,0,.25);
+    transform:rotate(-2deg);
   }
-  .toprow button:active { transform: translateY(2px); box-shadow: 0 1px 0 #c99a17; }
-  .toprow button.sel { background: linear-gradient(#ffe08a, #f0a500); }
-  .toprow .snd {
-    flex: 0 0 44px; font-size: 15px; padding: 8px 0;
-    background: linear-gradient(#e7fff6, #a8e6d4);
-    box-shadow: 0 3px 0 #5aa892, inset 0 1px 1px rgba(255,255,255,.6);
+  .brand span{ color:#1d3b22; margin-left:3px; }
+  .pills{ display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end; flex:1; }
+  .pill{
+    font-family:inherit; font-weight:700; font-size:10px; letter-spacing:.5px;
+    color:#33421f; background:linear-gradient(#fff6cf,#ffe9a3);
+    border:1px solid #caa93b; border-radius:20px;
+    padding:5px 9px; cursor:pointer;
+    box-shadow:0 2px 0 #b9932f, 0 3px 4px rgba(0,0,0,.25);
   }
+  .pill:active{ transform:translateY(2px); box-shadow:0 0 0 #b9932f; }
 
-  /* LCD screen */
-  .bezel {
-    background: #34443c;
-    padding: 12px;
-    border-radius: 14px;
-    box-shadow: inset 0 0 0 3px #1e2823, inset 0 5px 16px rgba(0,0,0,.65);
+  .screenwrap{
+    padding:12px; border-radius:14px;
+    background:linear-gradient(#2b1a17,#432d29);
+    box-shadow:inset 0 4px 10px rgba(0,0,0,.6);
   }
-  canvas {
-    width: 100%; height: auto; display: block;
-    border-radius: 7px;
-    background: #b6c2a8;
+  .screen{
+    position:relative; width:100%; aspect-ratio:4/3;
+    border-radius:8px; overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 20%, #cdd9c1, #a9bb9f 70%, #93a68a 100%);
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.25), inset 0 0 26px rgba(20,40,20,.35);
   }
+  .screen::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(120deg,rgba(255,255,255,.28),rgba(255,255,255,0) 42%);
+  }
+  #lcd{ position:absolute; inset:0; width:100%; height:100%; display:block; }
 
-  /* big round hand buttons */
-  .pad { display: flex; gap: 16px; margin-top: 16px; }
-  .pad button {
-    flex: 1; height: 74px; border: none; cursor: pointer; border-radius: 50px;
-    font: 800 17px/1 "Courier New", monospace; letter-spacing: 1px;
-    color: #23312a;
-    background: radial-gradient(circle at 38% 32%, #fff3c4, #ffd83d 62%, #f0a500);
-    box-shadow: 0 6px 0 #b8860b, inset 0 2px 3px rgba(255,255,255,.6);
-    touch-action: manipulation;
-  }
-  .pad button:active { transform: translateY(4px); box-shadow: 0 2px 0 #b8860b; }
-  .pad .lbl { font-size: 11px; opacity: .7; display: block; margin-top: 2px; letter-spacing: 2px; }
+  /* ---- LCD segment styling ---- */
+  .sg{ fill:#25321d; opacity:.07; }
+  .sg.on{ opacity:.92; }
+  .stn{ fill:#25321d; opacity:.06; }
+  .stn.lead{ opacity:.4; }
+  .cl{ fill:#25321d; opacity:.9; }
+  .cs{ fill:none; stroke:#25321d; stroke-width:3; stroke-linecap:round; opacity:.9; }
+  @keyframes pulse{ 0%,49%{opacity:.9} 50%,100%{opacity:.15} }
+  .arm{ fill:none; stroke:#25321d; stroke-width:7; stroke-linecap:round; opacity:.08; }
+  .arm.on{ opacity:.9; }
+  .hand{ fill:#25321d; opacity:.08; }
+  .hand.on{ opacity:.95; }
+  .ball{ fill:#25321d; opacity:0; }
+  .ball.on{ opacity:.96; }
+  .trail{ fill:#25321d; opacity:0; }
+  .trail.on{ opacity:.4; }
+  .crush{ fill:#25321d; opacity:0; font:800 13px "Courier New",monospace; letter-spacing:1px; }
+  .crush.on{ opacity:.9; animation:pulse .16s steps(2,jump-none) 8; }
+  .burst{ stroke:#25321d; stroke-width:2.6; stroke-linecap:round; opacity:0; }
+  .burst.on{ opacity:.9; animation:pulse .16s steps(2,jump-none) 8; }
 
-  .tip {
-    margin-top: 10px; text-align: center;
-    color: #1f5c4d; font: 700 10px/1.5 "Courier New", monospace; letter-spacing: 1px;
+  #ov{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px; text-align:center;
+    padding:14px; pointer-events:none;
+    background:rgba(170,188,160,.74);
+    color:#233019; font-family:"Courier New",monospace; letter-spacing:1px;
   }
+  #ov.hide{ display:none; }
+  #ovTitle{ font-size:26px; font-weight:800; letter-spacing:3px; }
+  #ov:not(.hide) #ovTitle{ animation:ovp 1s steps(1,end) infinite; }
+  @keyframes ovp{ 50%{opacity:.35} }
+  #ovMsg{ font-size:12px; white-space:pre-line; line-height:1.7; }
 
-  @media (orientation: landscape) and (max-height: 560px) {
-    .cabinet { width: min(64vh, 94vw, 430px); padding-top: 14px; }
-    .brand { font-size: 18px; margin-bottom: 8px; }
-    .pad button { height: 54px; }
-    .tip { display: none; }
+  .pad{ display:flex; justify-content:space-around; align-items:center; margin-top:16px; }
+  .rbtn{
+    width:104px; height:104px; border-radius:50%;
+    font-family:inherit; color:#7a1710; cursor:pointer;
+    border:2px solid #7c1c12;
+    background:radial-gradient(circle at 38% 32%, #fff7ea, #f2ddc0 62%, #e2c39c 100%);
+    box-shadow:0 6px 0 #8a1f13, 0 9px 12px rgba(0,0,0,.4), inset 0 3px 6px rgba(255,255,255,.6);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    touch-action:none; user-select:none;
   }
+  .rbtn b{ font-size:24px; line-height:1; }
+  .rbtn small{ font-size:11px; font-weight:800; letter-spacing:1px; }
+  .rbtn:active{ transform:translatey(5px); box-shadow:0 1px 0 #8a1f13, 0 3px 6px rgba(0,0,0,.4), inset 0 3px 6px rgba(255,255,255,.6); }
+
+  .hintbar{ margin-top:10px; text-align:center; font-size:10px; color:rgba(255,236,230,.82); line-height:1.5; }
 </style>
 </head>
 <body>
-  <div class="cabinet">
-    <div class="brand">JUGGLE <b>POP</b><small>L C D &nbsp; J U G G L I N G</small></div>
-
-    <div class="toprow">
-      <button id="btnA">GAME A</button>
-      <button id="btnB">GAME B</button>
-      <button id="btnR">RESET</button>
-      <button id="btnSnd" class="snd" aria-label="sound">&#9834;</button>
+<div id="stage">
+  <div id="console">
+    <div class="topbar">
+      <div class="brand">JUGGLE<span>POP</span></div>
+      <div class="pills">
+        <button class="pill" data-act="a">GAME&nbsp;A</button>
+        <button class="pill" data-act="b">GAME&nbsp;B</button>
+        <button class="pill" data-act="reset">RESET</button>
+        <button class="pill" data-act="snd" id="sndbtn">SOUND&nbsp;&#9679;</button>
+      </div>
     </div>
 
-    <div class="bezel">
-      <canvas id="game" width="480" height="392"></canvas>
+    <div class="screenwrap">
+      <div class="screen">
+        <svg id="lcd" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet"></svg>
+        <div id="ov">
+          <div id="ovTitle">JUGGLE POP</div>
+          <div id="ovMsg"></div>
+        </div>
+      </div>
     </div>
 
     <div class="pad">
-      <button id="btnL">&#9664; LEFT<span class="lbl">LEFT HAND</span></button>
-      <button id="btnRi">RIGHT &#9654;<span class="lbl">RIGHT HAND</span></button>
+      <button class="rbtn" id="btnL"><b>&#9664;</b><small>LEFT</small></button>
+      <button class="rbtn" id="btnR"><b>&#9654;</b><small>RIGHT</small></button>
     </div>
-
-    <div class="tip">◀ / A = 左手を送る &nbsp; ▶ / D = 右手を送る &nbsp; 光るリングに手を合わせろ</div>
+    <div class="hintbar">
+      &larr; / A ＝ 左手を移動（3か所を循環）　&rarr; / D ＝ 右手<br>
+      落ちてくる軌道を見て手を合わせる ／ 3回落とすとゲームオーバー
+    </div>
   </div>
+</div>
 
 <script>
-(() => {
-  "use strict";
+(function(){
+"use strict";
 
-  const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
-  const W = 480, H = 392;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  ctx.scale(dpr, dpr);
+/* ============ helpers ============ */
+var NS="http://www.w3.org/2000/svg";
+var lcd=document.getElementById("lcd");
+function mk(tag,attrs,parent){
+  var e=document.createElementNS(NS,tag);
+  for(var k in attrs) e.setAttribute(k,attrs[k]);
+  (parent||lcd).appendChild(e);
+  return e;
+}
+function $(id){ return document.getElementById(id); }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function pick(){ return Math.floor(Math.random()*3); }
 
-  const LCD_BG = "#b6c2a8";
-  const INK    = "#242f27";
-  const GHOST  = "rgba(36,47,39,0.12)";
-  const TRAIL  = "rgba(36,47,39,0.26)";
+/* ============ geometry ============
+   A fountain loop of 24 steps.  A ball rides it (index +1 / tick):
+     0..2  rise on the left (shared)      12..14 rise on the right (shared)
+     3..5  over the top (outer)           15..17 over the top (inner)
+     6..11 fall to the RIGHT hand         18..23 fall to the LEFT hand
+   The fall is one of 3 LANES -- the ball visibly commits to a lane over 6
+   dots; the matching hand (0/1/2) must be there when it lands.
+   Catch check: idx 11 (right), idx 23 (left).  1 drop = 1 miss, 3 = over.
+*/
+var LOOP=24;
+var LSPOT=[[120,206],[148,206],[176,206]];
+var RSPOT=[[224,206],[252,206],[280,206]];
 
-  // ---------------------------------------------------------------------------
-  //  Geometry — a 6-station juggling loop (cascade shape).
-  //   S0 = RIGHT hand catch   S3 = LEFT hand catch   others = air
-  //   loop order: S0 -> S1 -> S2 -> S3 -> S4 -> S5 -> S0
-  // ---------------------------------------------------------------------------
-  const STATIONS = [
-    { x: 388, y: 284 },  // 0  RIGHT hand
-    { x: 332, y: 170 },  // 1  air (R->L, rising)
-    { x: 182, y: 124 },  // 2  air (R->L, over the top, just before L)
-    { x: 92,  y: 284 },  // 3  LEFT hand
-    { x: 150, y: 170 },  // 4  air (L->R, rising)
-    { x: 300, y: 124 },  // 5  air (L->R, over the top, just before R)
-  ];
-  const R_LANES = [ { x: 416, y: 306 }, { x: 388, y: 284 }, { x: 356, y: 258 } ];
-  const L_LANES = [ { x: 64,  y: 306 }, { x: 92,  y: 284 }, { x: 124, y: 258 } ];
-  const CATCH = { 0: "R", 3: "L" };
-  const LS = { x: 222, y: 300 }, RS = { x: 258, y: 300 };   // shoulders
+var RISEL=[[146,178],[136,140],[146,98]];
+var TOPO =[[172,62],[200,52],[228,62]];
+var RISER=[[254,178],[264,140],[254,98]];
+var TOPI =[[228,68],[200,58],[172,68]];
 
-  const mix = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+var FALLR=[
+  [[236,84],[231,110],[227,136],[225,160],[224,183],[224,206]],
+  [[250,84],[252,110],[252,136],[252,160],[252,183],[252,206]],
+  [[266,84],[272,110],[276,136],[278,160],[280,183],[280,206]]
+];
+var FALLL=[
+  [[164,84],[152,110],[142,136],[132,160],[124,183],[120,206]],
+  [[158,84],[154,110],[151,136],[149,160],[148,183],[148,206]],
+  [[168,84],[172,110],[174,136],[175,160],[176,183],[176,206]]
+];
+var DECORX=[
+  [200,86],[200,116],[200,146],[185,100],[215,100],
+  [182,128],[218,128],[190,158],[210,158]
+];
 
-  function ballAt(station, lane) {
-    switch (station) {
-      case 0: return R_LANES[lane];
-      case 3: return L_LANES[lane];
-      case 2: return mix(STATIONS[2], L_LANES[lane], 0.48);
-      case 5: return mix(STATIONS[5], R_LANES[lane], 0.48);
-      case 1: return mix(STATIONS[1], L_LANES[lane], 0.22);
-      case 4: return mix(STATIONS[4], R_LANES[lane], 0.22);
-      default: return STATIONS[station];
-    }
+var SHL=[184,214], SHR=[216,214];
+var GY=252;
+
+function ballXY(b){
+  var i=b.i;
+  if(i<3)  return RISEL[i];
+  if(i<6)  return TOPO[i-3];
+  if(i<12) return FALLR[b.rlane][i-6];
+  if(i<15) return RISER[i-12];
+  if(i<18) return TOPI[i-15];
+  return FALLL[b.llane][i-18];
+}
+
+/* ============ 7-seg ============ */
+var SEG7={
+ "0":"abcdef","1":"bc","2":"abged","3":"abgcd","4":"fgbc","5":"afgcd",
+ "6":"afgedc","7":"abc","8":"abcdefg","9":"abcdfg",
+ "A":"abcefg","b":"cdefg","-":"g"," ":""
+};
+function digitAt(x,y,w,h){
+  var tk=Math.max(3,Math.round(w*0.19));
+  var vL=(h-3*tk)/2;
+  var d={
+    a:[x+tk,   y,          w-2*tk, tk],
+    f:[x,      y+tk,       tk,     vL],
+    b:[x+w-tk, y+tk,       tk,     vL],
+    g:[x+tk,   y+(h-tk)/2, w-2*tk, tk],
+    e:[x,      y+(h+tk)/2, tk,     vL],
+    c:[x+w-tk, y+(h+tk)/2, tk,     vL],
+    d:[x+tk,   y+h-tk,     w-2*tk, tk]
+  };
+  var o={};
+  for(var s in d){
+    var a=d[s];
+    o[s]=mk("rect",{x:a[0],y:a[1],width:a[2],height:a[3],rx:Math.min(a[2],a[3])*0.4,"class":"sg"});
+  }
+  return o;
+}
+function setSeg(o,ch){
+  var on=SEG7[ch]||"";
+  for(var s in o) o[s].classList.toggle("on", on.indexOf(s)>=0);
+}
+
+/* ============ build the LCD ============ */
+var armLE=[], armRE=[], handLE=[], handRE=[], ballEls=[], trailEls=[];
+var scoreDigits=[], modeGlyph, pipEls=[], crushEl={}, legEls={}, footEls={};
+var FALLR_EL=[], FALLL_EL=[], allFallEls=[];
+
+function ghost(p){ return mk("circle",{cx:p[0],cy:p[1],r:3,"class":"stn"}); }
+function armPath(s,p){
+  var my=Math.max(s[1],p[1])+7;
+  return "M"+s[0]+","+s[1]+" Q"+((s[0]+p[0])/2)+","+my+" "+p[0]+","+p[1];
+}
+
+function buildJuggler(){
+  mk("polygon",{points:"200,176 190,198 210,198","class":"cl"});   // hat
+  mk("circle",{cx:200,cy:175,r:2.5,"class":"cl"});                 // pom-pom
+  mk("circle",{cx:200,cy:203,r:8,"class":"cs"});                   // head
+  mk("circle",{cx:197,cy:202,r:1.4,"class":"cl"});
+  mk("circle",{cx:203,cy:202,r:1.4,"class":"cl"});
+  mk("path",{d:"M197,206 Q200,209 203,206","class":"cs"});
+  mk("polygon",{points:"189,211 211,211 216,250 184,250","class":"cl"}); // body
+  mk("circle",{cx:200,cy:222,r:1.5,"class":"stn"});
+  mk("circle",{cx:200,cy:233,r:1.5,"class":"stn"});
+  legEls.L=mk("rect",{x:191,y:250,width:5,height:16,rx:2,"class":"cl"});
+  legEls.R=mk("rect",{x:204,y:250,width:5,height:16,rx:2,"class":"cl"});
+  footEls.L=mk("ellipse",{cx:190,cy:267,rx:7,ry:3,"class":"cl"});
+  footEls.R=mk("ellipse",{cx:210,cy:267,rx:7,ry:3,"class":"cl"});
+  mk("rect",{x:44,y:272,width:312,height:2,"class":"stn"});
+}
+
+function buildCrush(side){
+  var g={}, cx=(side==="L")?138:262, cy=GY;
+  g.txt=mk("text",{x:(side==="L")?60:250,y:GY-14,"class":"crush"});
+  g.txt.textContent="CRUSH!";
+  g.lines=[];
+  for(var a=0;a<8;a++){
+    var ang=a*Math.PI/4;
+    g.lines.push(mk("line",{
+      x1:cx+Math.cos(ang)*5, y1:cy+Math.sin(ang)*5,
+      x2:cx+Math.cos(ang)*13, y2:cy+Math.sin(ang)*13, "class":"burst"}));
+  }
+  return g;
+}
+
+function build(){
+  while(lcd.firstChild) lcd.removeChild(lcd.firstChild);
+
+  DECORX.forEach(ghost);
+  RISEL.forEach(ghost); TOPO.forEach(ghost); RISER.forEach(ghost); TOPI.forEach(ghost);
+  for(var L=0;L<3;L++){
+    FALLR_EL[L]=FALLR[L].map(ghost);
+    FALLL_EL[L]=FALLL[L].map(ghost);
+    allFallEls=allFallEls.concat(FALLR_EL[L], FALLL_EL[L]);
   }
 
-  // ---------------------------------------------------------------------------
-  //  Audio — Web Audio API, all tones generated
-  // ---------------------------------------------------------------------------
-  let audioCtx = null, muted = false;
-  function ac() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === "suspended") audioCtx.resume();
-    return audioCtx;
+  buildJuggler();
+
+  for(var h=0;h<3;h++){
+    armLE[h]=mk("path",{d:armPath(SHL,LSPOT[h]),"class":"arm"});
+    handLE[h]=mk("circle",{cx:LSPOT[h][0],cy:LSPOT[h][1],r:5,"class":"hand"});
+    armRE[h]=mk("path",{d:armPath(SHR,RSPOT[h]),"class":"arm"});
+    handRE[h]=mk("circle",{cx:RSPOT[h][0],cy:RSPOT[h][1],r:5,"class":"hand"});
   }
-  function tone(freq, dur, type = "square", vol = 0.14, slideTo = null) {
-    if (muted) return;
-    const c = ac(), t0 = c.currentTime;
-    const o = c.createOscillator(), g = c.createGain();
-    o.type = type;
-    o.frequency.setValueAtTime(freq, t0);
-    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
-    g.gain.setValueAtTime(vol, t0);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+  for(var b=0;b<3;b++){
+    trailEls[b]=mk("circle",{cx:-20,cy:-20,r:8,"class":"trail"});
+    ballEls[b]=mk("circle",{cx:-20,cy:-20,r:8,"class":"ball"});
+  }
+
+  for(var i=0;i<4;i++) scoreDigits[i]=digitAt(288+i*25, 12, 21, 32);
+  modeGlyph=digitAt(22,14,13,20);
+  for(var p=0;p<3;p++) pipEls[p]=mk("circle",{cx:46+p*11,cy:22,r:3.5,"class":"sg"});
+
+  crushEl.L=buildCrush("L");
+  crushEl.R=buildCrush("R");
+}
+
+/* ============ audio ============ */
+var actx=null, soundOn=true;
+function resumeAudio(){
+  try{
+    if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==="suspended") actx.resume();
+  }catch(e){}
+}
+function blip(freq,dur,type,vol){
+  if(!soundOn||!actx) return;
+  try{
+    var c=actx, t0=c.currentTime;
+    var o=c.createOscillator(), g=c.createGain();
+    o.type=type||"square"; o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.linearRampToValueAtTime(vol||0.08,t0+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
     o.connect(g); g.connect(c.destination);
-    o.start(t0); o.stop(t0 + dur + 0.02);
-  }
-  const sndMove  = () => tone(520, 0.04, "square", 0.09);
-  const sndTick  = () => tone(1200 + Math.max(0, (0.5 - beatDur())) * 1400, 0.015, "square", 0.03);
-  const sndCatch = () => { tone(720, 0.05, "square", 0.12); setTimeout(() => tone(1040, 0.06, "square", 0.12), 42); };
-  const sndMiss  = () => tone(210, 0.4, "sawtooth", 0.2, 60);
-  const sndOver  = () => [520, 392, 300, 208].forEach((f, i) => setTimeout(() => tone(f, 0.22, "square", 0.15), i * 165));
-  const sndStart = () => { tone(600, 0.06, "square", 0.11); setTimeout(() => tone(920, 0.09, "square", 0.11), 55); };
+    o.start(t0); o.stop(t0+dur+0.03);
+  }catch(e){}
+}
+function beepTick(){
+  var iv=interval();
+  var f=1120+(SLOW-iv)/(SLOW-120)*980;
+  blip(f,0.04,"square",0.06);
+}
+function beepCatch(){ blip(2093,0.05,"square",0.12); setTimeout(function(){ blip(2794,0.05,"square",0.10); },36); }
+function beepCrush(){ blip(150,0.5,"sawtooth",0.22); setTimeout(function(){ blip(96,0.6,"square",0.16); },70); }
 
-  // ---------------------------------------------------------------------------
-  //  State
-  // ---------------------------------------------------------------------------
-  let state = "title";           // title | playing | gameover
-  let mode  = "A";
-  let score = 0;
-  let hiA = +(localStorage.getItem("jugglepop_hiA") || 0);
-  let hiB = +(localStorage.getItem("jugglepop_hiB") || 0);
-  let leftHand = 1, rightHand = 1;
-  let balls = [];
-  let beatT = 0, beatCount = 0, beatFlash = 0;
-  let leftFlash = 0, rightFlash = 0;
-  let time = 0;
+/* ============ state ============ */
+var SLOW=640, FAST=150;
+var mode="A", state="attract", score=0, miss=0;
+var hi={A:0,B:0};
+try{ hi.A=parseInt(localStorage.getItem("jpop_hi_A"))||0; hi.B=parseInt(localStorage.getItem("jpop_hi_B"))||0; }catch(e){}
+var balls=[], leftHand=1, rightHand=1;
+var tickCount=0, reliefTicks=0, footTick=0, footSide="R", timer=null;
 
-  function speedStage() {
-    const startThresh = mode === "B" ? 50 : 5;
-    if (score <= startThresh) return 0;
-    return Math.floor(score / 100) * 3 + Math.floor((score % 100) / 20);
-  }
-  function beatDur() {
-    if (state !== "playing") return 0.5;
-    return Math.max(0.14, 0.60 - speedStage() * 0.035);
-  }
-  function addScore(n) {
-    score += n;
-    const cap = mode === "B" ? 9900 : 10000;
-    if (score >= cap) score -= cap;
-  }
+function interval(){
+  if(state==="attract") return 300;
+  var lo=(mode==="B")?50:5;
+  if(score<=lo) return SLOW;
+  var maxr=(mode==="B")?2800:280;
+  var p=Math.min(score/maxr,1);
+  var e=p*p*(3-2*p);
+  var v=SLOW-(SLOW-FAST)*e;
+  if(reliefTicks>0) v+=150;
+  return clamp(v,FAST,SLOW);
+}
 
-  function makeBalls(list) {
-    return list.map(st => ({ station: st, prev: st, lane: 1, flash: 0, dropped: false, dropAt: 0 }));
-  }
-  function enterTitle() {
-    state = "title";
-    mode = "A";
-    balls = makeBalls([1, 2, 4]);
-    leftHand = rightHand = 1;
-    beatCount = 0; beatT = 0.5;
-  }
-  function startGame(m) {
-    ac(); sndStart();
-    mode = m; score = 0;
-    leftHand = rightHand = 1;
-    balls = makeBalls(m === "A" ? [1, 4] : [1, 2, 4]);
-    beatCount = 0; beatT = 0.45;
-    state = "playing";
-    refreshModeButtons();
-  }
-  function gameOver() {
-    if (state !== "playing") return;
-    state = "gameover";
-    if (mode === "B") { if (score > hiB) { hiB = score; localStorage.setItem("jugglepop_hiB", hiB); } }
-    else             { if (score > hiA) { hiA = score; localStorage.setItem("jugglepop_hiA", hiA); } }
-    sndOver();
-  }
+/* ============ overlay ============ */
+var ovEl=$("ov"), ovTitle=$("ovTitle"), ovMsg=$("ovMsg");
+function ov(title,msg){ ovTitle.textContent=title; ovMsg.textContent=msg; ovEl.classList.remove("hide"); }
+function hideOv(){ ovEl.classList.add("hide"); }
 
-  function cycleLeft()  { if (state !== "playing") return; leftHand  = (leftHand  + 1) % 3; leftFlash = 1;  sndMove(); }
-  function cycleRight() { if (state !== "playing") return; rightHand = (rightHand + 1) % 3; rightFlash = 1; sndMove(); }
-
-  // ---------------------------------------------------------------------------
-  //  Beat — every ball steps one station; catches resolve on arrival
-  // ---------------------------------------------------------------------------
-  function onBeat() {
-    beatCount++;
-    beatFlash = 1;
-    sndTick();
-
-    for (const b of balls) {
-      if (b.dropped) continue;
-      b.prev = b.station;
-      b.station = (b.station + 1) % 6;
-    }
-    // first few beats: balls settle into the pattern — no score, no miss
-    if (state === "title" || beatCount < 4) return;
-
-    for (const b of balls) {
-      if (b.dropped) continue;
-      const side = CATCH[b.station];
-      if (!side) continue;
-      const hand = side === "R" ? rightHand : leftHand;
-      if (hand === b.lane) {
-        addScore(mode === "B" ? 10 : 1);
-        b.lane = (b.lane + 1) % 3;
-        b.flash = 1;
-        if (side === "R") rightFlash = 1; else leftFlash = 1;
-        sndCatch();
-      } else {
-        b.dropped = true;
-        b.dropAt = time;
-        sndMiss();
-        gameOver();
-      }
-    }
-  }
-
-  function update(dt) {
-    beatFlash = Math.max(0, beatFlash - dt * 4);
-    leftFlash = Math.max(0, leftFlash - dt * 5);
-    rightFlash = Math.max(0, rightFlash - dt * 5);
-    for (const b of balls) b.flash = Math.max(0, b.flash - dt * 3);
-
-    if (state === "playing" || state === "title") {
-      beatT -= dt;
-      if (beatT <= 0) { beatT += beatDur(); onBeat(); }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  //  7-segment number rendering
-  // ---------------------------------------------------------------------------
-  const SEGMAP = {
-    0: "abcdef", 1: "bc", 2: "abged", 3: "abgcd", 4: "fgbc",
-    5: "afgcd", 6: "afgecd", 7: "abc", 8: "abcdefg", 9: "abcdfg",
-  };
-  function drawDigit(x, y, w, h, d, on, off) {
-    const t = Math.max(2, w * 0.17);
-    const segs = {
-      a: [x + t, y, w - 2 * t, t],
-      g: [x + t, y + h / 2 - t / 2, w - 2 * t, t],
-      d: [x + t, y + h - t, w - 2 * t, t],
-      f: [x, y + t, t, h / 2 - 1.5 * t],
-      b: [x + w - t, y + t, t, h / 2 - 1.5 * t],
-      e: [x, y + h / 2 + 0.5 * t, t, h / 2 - 1.5 * t],
-      c: [x + w - t, y + h / 2 + 0.5 * t, t, h / 2 - 1.5 * t],
-    };
-    const active = d == null ? "" : SEGMAP[d];
-    for (const k in segs) {
-      ctx.fillStyle = active.indexOf(k) >= 0 ? on : off;
-      const s = segs[k];
-      ctx.fillRect(s[0], s[1], s[2], s[3]);
-    }
-  }
-  function drawNumber(left, y, w, h, value, digits, on, off) {
-    const str = String(Math.max(0, Math.floor(value))).padStart(digits, " ");
-    const gap = Math.max(3, w * 0.3);
-    for (let i = 0; i < digits; i++) {
-      const c = str[i];
-      drawDigit(left + i * (w + gap), y, w, h, c === " " ? null : +c, on, off);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  //  Scene drawing
-  // ---------------------------------------------------------------------------
-  function dot(p, r) { ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fill(); }
-
-  function drawJuggler() {
-    // legs + shoes
-    ctx.fillStyle = INK;
-    ctx.fillRect(230, 332, 8, 22);
-    ctx.fillRect(244, 332, 8, 22);
-    ctx.fillRect(222, 352, 18, 6);
-    ctx.fillRect(240, 352, 18, 6);
-    // body (puffy)
-    ctx.beginPath();
-    ctx.moveTo(222, 334); ctx.lineTo(258, 334); ctx.lineTo(266, 300); ctx.lineTo(214, 300);
-    ctx.closePath(); ctx.fill();
-    // ruffle collar
-    ctx.beginPath();
-    ctx.moveTo(210, 300); ctx.lineTo(270, 300); ctx.lineTo(252, 312); ctx.lineTo(228, 312);
-    ctx.closePath(); ctx.fill();
-    // head
-    dot({ x: 240, y: 276 }, 15);
-    // cone hat
-    ctx.beginPath();
-    ctx.moveTo(224, 268); ctx.lineTo(256, 268); ctx.lineTo(240, 228);
-    ctx.closePath(); ctx.fill();
-    dot({ x: 240, y: 226 }, 4);
-    // nose (negative space)
-    ctx.fillStyle = LCD_BG; dot({ x: 240, y: 280 }, 4.5);
-    ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(240, 280, 4.5, 0, 7); ctx.stroke();
-  }
-
-  function drawArm(sh, hand, color) {
-    ctx.strokeStyle = color; ctx.lineWidth = 6; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(sh.x, sh.y); ctx.lineTo(hand.x, hand.y); ctx.stroke();
-    ctx.fillStyle = color; dot(hand, 6.5);
-    ctx.lineCap = "butt";
-  }
-
-  function drawArms() {
-    for (let i = 0; i < 3; i++) if (i !== leftHand)  drawArm(LS, L_LANES[i], GHOST);
-    for (let i = 0; i < 3; i++) if (i !== rightHand) drawArm(RS, R_LANES[i], GHOST);
-    drawArm(LS, L_LANES[leftHand], INK);
-    drawArm(RS, R_LANES[rightHand], INK);
-    if (leftFlash > 0)  { ctx.fillStyle = INK; dot(L_LANES[leftHand], 6.5 + leftFlash * 5); }
-    if (rightFlash > 0) { ctx.fillStyle = INK; dot(R_LANES[rightHand], 6.5 + rightFlash * 5); }
-  }
-
-  // bright ring on the lane an incoming ball will drop into — "catch here"
-  function drawTargets() {
-    for (const b of balls) {
-      if (b.dropped) continue;
-      let p = null, near = false;
-      if (b.station === 1 || b.station === 2) { p = L_LANES[b.lane]; near = b.station === 2; }
-      else if (b.station === 4 || b.station === 5) { p = R_LANES[b.lane]; near = b.station === 5; }
-      if (!p) continue;
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = near ? 3 : 2;
-      ctx.globalAlpha = near ? 0.95 : 0.4;
-      ctx.beginPath(); ctx.arc(p.x, p.y, 13, 0, 7); ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  function drawBalls() {
-    // ghost of every possible ball position
-    ctx.fillStyle = GHOST;
-    for (let s = 0; s < 6; s++) {
-      if (s === 0 || s === 3) for (let l = 0; l < 3; l++) dot(ballAt(s, l), 7);
-      else dot(STATIONS[s], 7);
-    }
-    for (const b of balls) {
-      const p = ballAt(b.station, b.lane);
-      if (b.dropped) {
-        const y = Math.min(H + 20, p.y + (time - b.dropAt) * 320);
-        ctx.fillStyle = INK; dot({ x: p.x, y }, 8);
-        continue;
-      }
-      ctx.fillStyle = TRAIL; dot(ballAt(b.prev, b.lane), 7);   // LCD ghost trail
-      ctx.fillStyle = INK; dot(p, 8 + b.flash * 3);
-    }
-  }
-
-  function drawHUD() {
-    ctx.fillStyle = INK;
-    ctx.textBaseline = "alphabetic";
-
-    drawNumber(14, 10, 16, 30, score, 4, INK, GHOST);
-
-    // mode badge
-    ctx.fillStyle = INK;
-    ctx.font = "bold 13px 'Courier New', monospace";
-    ctx.textAlign = "left";
-    ctx.fillText("GAME", 116, 20);
-    ctx.font = "bold 22px 'Courier New', monospace";
-    ctx.fillText(mode, 128, 42);
-
-    // speed gauge
-    const stg = Math.min(12, speedStage());
-    for (let i = 0; i < 12; i++) {
-      ctx.fillStyle = i < stg ? INK : GHOST;
-      ctx.fillRect(168 + i * 12, 16, 8, 16);
-    }
-    ctx.fillStyle = GHOST;
-    ctx.font = "bold 9px 'Courier New', monospace";
-    ctx.fillText("SPEED", 168, 44);
-
-    // hi score
-    ctx.fillStyle = INK;
-    ctx.font = "bold 12px 'Courier New', monospace";
-    ctx.fillText("HI", 330, 22);
-    drawNumber(352, 12, 11, 20, mode === "B" ? hiB : hiA, 4, INK, GHOST);
-
-    ctx.strokeStyle = INK; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(10, 50); ctx.lineTo(W - 10, 50); ctx.stroke();
-  }
-
-  function render() {
-    ctx.fillStyle = LCD_BG;
-    ctx.fillRect(0, 0, W, H);
-
-    drawHUD();
-
-    // faint loop guide
-    ctx.strokeStyle = GHOST; ctx.lineWidth = 2; ctx.setLineDash([2, 6]);
-    ctx.beginPath();
-    for (let k = 0; k <= 48; k++) {
-      const s = (k / 48) * 6;
-      const i = Math.floor(s) % 6, f = s - Math.floor(s);
-      const a = STATIONS[i], b = STATIONS[(i + 1) % 6];
-      const x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f;
-      k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-    }
-    ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
-
-    drawJuggler();
-    drawArms();
-    drawTargets();
-    drawBalls();
-
-    // vignette
-    const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.82);
-    g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(20,30,15,0.20)");
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-
-    if (state !== "playing") {
-      ctx.fillStyle = "rgba(182,194,168,0.88)";
-      ctx.fillRect(46, 92, W - 92, 210);
-      ctx.strokeStyle = INK; ctx.lineWidth = 3;
-      ctx.strokeRect(46, 92, W - 92, 210);
-
-      ctx.fillStyle = INK; ctx.textAlign = "center";
-      const blink = Math.floor(time * 2) % 2 === 0;
-
-      if (state === "title") {
-        ctx.font = "bold 34px 'Courier New', monospace";
-        ctx.fillText("JUGGLE POP", W / 2, 145);
-        ctx.font = "bold 13px 'Courier New', monospace";
-        ctx.fillText("ピエロのお手玉を1個も落とさず受け続けろ", W / 2, 176);
-        ctx.fillText("光るリングの位置に ◀左手 ▶右手 を合わせる", W / 2, 196);
-        ctx.fillText("A=ボール2個/1点   B=ボール3個/10点", W / 2, 216);
-        if (blink) {
-          ctx.font = "bold 16px 'Courier New', monospace";
-          ctx.fillText("GAME A / GAME B を押してスタート", W / 2, 258);
-        }
-      } else {
-        ctx.font = "bold 34px 'Courier New', monospace";
-        ctx.fillText("GAME OVER", W / 2, 142);
-        ctx.font = "bold 16px 'Courier New', monospace";
-        ctx.fillText("GAME " + mode + "    " + score + " pts", W / 2, 178);
-        ctx.fillText("HI  " + (mode === "B" ? hiB : hiA), W / 2, 202);
-        if (blink) {
-          ctx.font = "bold 15px 'Courier New', monospace";
-          ctx.fillText("GAME A / GAME B でもう一度", W / 2, 250);
-        }
-      }
-      ctx.textAlign = "left";
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  //  Loop
-  // ---------------------------------------------------------------------------
-  let last = 0;
-  function loop(ts) {
-    const dt = Math.min(0.05, (ts - last) / 1000 || 0);
-    last = ts;
-    time += dt;
-    update(dt);
-    render();
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-
-  // ---------------------------------------------------------------------------
-  //  Input
-  // ---------------------------------------------------------------------------
-  const btnA = document.getElementById("btnA");
-  const btnB = document.getElementById("btnB");
-  const btnR = document.getElementById("btnR");
-  const btnL = document.getElementById("btnL");
-  const btnRi = document.getElementById("btnRi");
-  const btnSnd = document.getElementById("btnSnd");
-
-  function refreshModeButtons() {
-    btnA.classList.toggle("sel", state === "playing" && mode === "A");
-    btnB.classList.toggle("sel", state === "playing" && mode === "B");
-  }
-
-  const tap = (el, fn) => {
-    el.addEventListener("pointerdown", e => { e.preventDefault(); fn(); });
-  };
-  tap(btnA, () => startGame("A"));
-  tap(btnB, () => startGame("B"));
-  tap(btnR, () => { enterTitle(); refreshModeButtons(); });
-  tap(btnL, cycleLeft);
-  tap(btnRi, cycleRight);
-  function toggleSound() {
-    muted = !muted;
-    btnSnd.innerHTML = muted ? "&#128263;" : "&#9834;";
-    if (!muted) ac();
-  }
-  tap(btnSnd, toggleSound);
-
-  window.addEventListener("keydown", e => {
-    const k = e.key.toLowerCase();
-    if (["arrowleft", "arrowright", "a", "d", " "].includes(k)) e.preventDefault();
-    if (e.repeat) return;
-    if (k === "arrowleft" || k === "a") cycleLeft();
-    else if (k === "arrowright" || k === "d") cycleRight();
-    else if (k === "1") startGame("A");
-    else if (k === "2") startGame("B");
-    else if (k === " " && state !== "playing") startGame("A");
-    else if (k === "m") toggleSound();
+function showCrush(side){
+  var g=crushEl[side];
+  g.txt.classList.add("on");
+  g.lines.forEach(function(l){ l.classList.add("on"); });
+}
+function hideCrush(){
+  ["L","R"].forEach(function(s){
+    crushEl[s].txt.classList.remove("on");
+    crushEl[s].lines.forEach(function(l){ l.classList.remove("on"); });
   });
+}
 
-  ["pointerdown", "keydown", "touchstart"].forEach(ev =>
-    window.addEventListener(ev, () => { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); }, { passive: true }));
+/* ============ flow ============ */
+function attract(){
+  clearTimeout(timer);
+  mode="A"; state="attract"; score=0; miss=0; reliefTicks=0; footTick=0; tickCount=0;
+  leftHand=1; rightHand=1;
+  balls=[
+    {i:0, rlane:pick(), llane:pick(), dropped:false},
+    {i:12,rlane:pick(), llane:pick(), dropped:false}
+  ];
+  hideCrush();
+  ov("JUGGLE POP","▶  GAME A  /  GAME B\n( キー 1 / 2 でも開始 )");
+  render();
+  demoLoop();
+}
+function demoLoop(){
+  clearTimeout(timer);
+  timer=setTimeout(function(){
+    if(state!=="attract") return;
+    tickCount++;
+    balls.forEach(function(b){
+      b.i=(b.i+1)%LOOP;
+      if(b.i===6) b.rlane=pick();
+      if(b.i===18) b.llane=pick();
+      if(b.i>=6 && b.i<12) rightHand=b.rlane;
+      if(b.i>=18 && b.i<24) leftHand=b.llane;
+    });
+    render();
+    demoLoop();
+  }, 300);
+}
 
-  document.addEventListener("gesturestart", e => e.preventDefault());
-  document.addEventListener("dblclick", e => e.preventDefault());
-  document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+function newGame(m){
+  resumeAudio();
+  clearTimeout(timer);
+  mode=m; state="ready"; score=0; miss=0; reliefTicks=0; footTick=0; tickCount=0;
+  leftHand=1; rightHand=1;
+  var n=(m==="A")?2:3, off=(m==="A")?12:8;
+  balls=[];
+  for(var k=0;k<n;k++) balls.push({ i:(k*off)%LOOP, rlane:pick(), llane:pick(), dropped:false });
+  hideCrush();
+  ov("READY","");
+  render();
+  var rc=0;
+  var rd=function(){
+    blip(880,0.07,"square",0.09); rc++;
+    if(rc>=3){ hideOv(); state="play"; render(); loop(); }
+    else timer=setTimeout(rd,380);
+  };
+  timer=setTimeout(rd,380);
+}
 
-  enterTitle();
+function loop(){
+  clearTimeout(timer);
+  timer=setTimeout(function(){
+    if(state!=="play") return;
+    tickCount++;
+    if(reliefTicks>0) reliefTicks--;
+    if(footTick>0) footTick--;
+    step();
+    if(state==="play"){ beepTick(); render(); loop(); }
+    else render();
+  }, interval());
+}
+
+function step(){
+  for(var k=0;k<balls.length;k++){
+    var b=balls[k];
+    if(b.dropped) continue;
+    b.i=(b.i+1)%LOOP;
+    if(b.i===6)  b.rlane=pick();
+    else if(b.i===18) b.llane=pick();
+    else if(b.i===11){
+      if(rightHand===b.rlane) doCatch();
+      else return doDrop(b,"R");
+    }else if(b.i===23){
+      if(leftHand===b.llane) doCatch();
+      else return doDrop(b,"L");
+    }
+  }
+}
+
+function doCatch(){
+  if(mode==="B") score=(score+10>9990)?0:score+10;
+  else           score=(score+1>9999)?0:score+1;
+  if(score>0 && score%100===0) reliefTicks=5;
+  beepCatch();
+}
+
+function doDrop(b,side){
+  b.dropped=true; b.side=side;
+  miss++;
+  showCrush(side);
+  beepCrush();
+  state="stumble";
+  clearTimeout(timer);
+  render();
+  if(miss>=3) timer=setTimeout(gameOver,950);
+  else        timer=setTimeout(recover,950);
+}
+function recover(){
+  hideCrush();
+  for(var k=0;k<balls.length;k++){
+    var b=balls[k];
+    if(b.dropped){
+      b.dropped=false;
+      b.i=(b.side==="R")?12:0;
+      b.rlane=pick(); b.llane=pick();
+    }
+  }
+  state="play"; render(); loop();
+}
+function gameOver(){
+  state="over";
+  if(score>hi[mode]){
+    hi[mode]=score;
+    try{ localStorage.setItem("jpop_hi_"+mode,String(score)); }catch(e){}
+  }
+  ov("GAME OVER","SCORE  "+pad4(score)+"      HI  "+pad4(hi[mode])+"\n▶  GAME A  /  GAME B");
+  render();
+}
+
+/* ============ render ============ */
+function pad4(v){ var s=""+v; while(s.length<4) s="0"+s; return s; }
+
+function render(){
+  var s=pad4(score);
+  for(var i=0;i<4;i++) setSeg(scoreDigits[i], s.charAt(i));
+  setSeg(modeGlyph, mode==="A"?"A":"b");
+  for(var p=0;p<3;p++) pipEls[p].classList.toggle("on", p<miss);
+
+  for(var f=0;f<allFallEls.length;f++) allFallEls[f].classList.remove("lead");
+
+  var fast=interval()<220;
+  for(var k=0;k<ballEls.length;k++){
+    var b=balls[k];
+    if(!b){ ballEls[k].classList.remove("on"); trailEls[k].classList.remove("on"); continue; }
+    var xy;
+    if(b.dropped){
+      var sp=(b.side==="L")?LSPOT[b.llane]:RSPOT[b.rlane];
+      xy=[sp[0], GY];
+    }else xy=ballXY(b);
+    ballEls[k].setAttribute("cx",xy[0]); ballEls[k].setAttribute("cy",xy[1]);
+    ballEls[k].classList.add("on");
+
+    if(!b.dropped && fast){
+      var tp=ballXY({i:(b.i+LOOP-1)%LOOP, rlane:b.rlane, llane:b.llane});
+      trailEls[k].setAttribute("cx",tp[0]); trailEls[k].setAttribute("cy",tp[1]);
+      trailEls[k].classList.add("on");
+    }else trailEls[k].classList.remove("on");
+
+    if(!b.dropped){
+      if(b.i>=6 && b.i<11){
+        var r0=b.i-6;
+        if(FALLR_EL[b.rlane][r0+1]) FALLR_EL[b.rlane][r0+1].classList.add("lead");
+        if(FALLR_EL[b.rlane][r0+2]) FALLR_EL[b.rlane][r0+2].classList.add("lead");
+      }else if(b.i>=18 && b.i<23){
+        var l0=b.i-18;
+        if(FALLL_EL[b.llane][l0+1]) FALLL_EL[b.llane][l0+1].classList.add("lead");
+        if(FALLL_EL[b.llane][l0+2]) FALLL_EL[b.llane][l0+2].classList.add("lead");
+      }
+    }
+  }
+
+  for(var h=0;h<3;h++){
+    armLE[h].classList.toggle("on", h===leftHand);
+    handLE[h].classList.toggle("on", h===leftHand);
+    armRE[h].classList.toggle("on", h===rightHand);
+    handRE[h].classList.toggle("on", h===rightHand);
+  }
+
+  var rR=footTick>0 && footSide==="R", rL=footTick>0 && footSide==="L";
+  legEls.R.setAttribute("height", rR?9:16);
+  footEls.R.setAttribute("cy", rR?259:267);
+  legEls.L.setAttribute("height", rL?9:16);
+  footEls.L.setAttribute("cy", rL?259:267);
+}
+
+/* ============ input ============ */
+function pressLeft(){
+  resumeAudio();
+  if(state!=="play") return;
+  leftHand=(leftHand+1)%3;
+  footSide="R"; footTick=2;
+  blip(1250,0.02,"square",0.05);
+  render();
+}
+function pressRight(){
+  resumeAudio();
+  if(state!=="play") return;
+  rightHand=(rightHand+1)%3;
+  footSide="L"; footTick=2;
+  blip(1250,0.02,"square",0.05);
+  render();
+}
+
+var btnL=$("btnL"), btnR=$("btnR");
+function wire(el,fn){
+  el.addEventListener("touchstart",function(e){ e.preventDefault(); fn(); },{passive:false});
+  el.addEventListener("mousedown",function(e){ e.preventDefault(); fn(); });
+}
+wire(btnL,pressLeft); wire(btnR,pressRight);
+
+document.querySelectorAll(".pill").forEach(function(btn){
+  btn.addEventListener("click",function(){
+    resumeAudio();
+    var a=btn.dataset.act;
+    if(a==="a") newGame("A");
+    else if(a==="b") newGame("B");
+    else if(a==="reset") attract();
+    else if(a==="snd"){
+      soundOn=!soundOn;
+      btn.innerHTML="SOUND&nbsp;"+(soundOn?"&#9679;":"&#9675;");
+    }
+  });
+});
+
+window.addEventListener("keydown",function(e){
+  var kk=(e.key||"").toLowerCase();
+  if(e.repeat) return;
+  if(kk==="arrowleft"||kk==="a"){ e.preventDefault(); pressLeft(); }
+  else if(kk==="arrowright"||kk==="d"){ e.preventDefault(); pressRight(); }
+  else if(kk==="1"){ newGame("A"); }
+  else if(kk==="2"){ newGame("B"); }
+  else if(kk==="r"){ attract(); }
+});
+
+/* block mobile zoom / long-press menu */
+document.addEventListener("gesturestart",function(e){ e.preventDefault(); });
+document.addEventListener("dblclick",function(e){ e.preventDefault(); },{passive:false});
+$("console").addEventListener("contextmenu",function(e){ e.preventDefault(); });
+var lastTouchEnd=0;
+document.addEventListener("touchend",function(e){
+  var now=Date.now();
+  if(now-lastTouchEnd<=320) e.preventDefault();
+  lastTouchEnd=now;
+},{passive:false});
+
+/* ============ responsive fit ============ */
+function fit(){
+  var c=$("console");
+  c.style.transform="scale(1)";
+  var r=c.getBoundingClientRect();
+  var k=Math.min(window.innerWidth/(r.width+18), window.innerHeight/(r.height+18), 1.45);
+  c.style.transform="scale("+k+")";
+}
+window.addEventListener("resize",fit);
+window.addEventListener("orientationchange",function(){ setTimeout(fit,200); });
+
+/* ============ boot ============ */
+build();
+attract();
+fit();
+setTimeout(fit,120);
+
 })();
 </script>
 </body>
