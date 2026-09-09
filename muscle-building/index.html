@@ -186,14 +186,27 @@ function drawScore(v){
 /* ================= geometry ================= */
 var LANEX=[92,196,300];
 var HERO_Y=192;                 // hero foot-ish baseline
-var TOP_Y=[40,82,122,158];      // 4 stations for a falling material (idx 3 = arrival at hands)
 var SIDE_Y=174;                 // incoming obstacle height (hero torso)
+var TOP_STEPS=9;                // fine stations for a falling material (last = arrival)
+var SIDE_STEPS=9;               // fine stations for an incoming obstacle (last = arrival)
+var TOP_Y0=32, TOP_Y1=160;
+var SIDE_X_L=20, SIDE_X_R=346;
 
-function topPath(lane){ var x=LANEX[lane]; return [[x,TOP_Y[0]],[x,TOP_Y[1]],[x,TOP_Y[2]],[x,TOP_Y[3]]]; }
+function topPath(lane){
+  var x=LANEX[lane], p=[];
+  for(var i=0;i<TOP_STEPS;i++){
+    var f=i/(TOP_STEPS-1);
+    p.push([ x, TOP_Y0 + (TOP_Y1-TOP_Y0)*f ]);
+  }
+  return p;
+}
 function sidePath(origin,target){
-  var ex = (origin==="L") ? 22 : 344;
+  var ex = (origin==="L") ? SIDE_X_L : SIDE_X_R;
   var tx = LANEX[target], p=[];
-  for(var i=0;i<4;i++) p.push([ ex + (tx-ex)*(i/3), SIDE_Y ]);
+  for(var i=0;i<SIDE_STEPS;i++){
+    var f=i/(SIDE_STEPS-1);
+    p.push([ ex + (tx-ex)*f, SIDE_Y ]);
+  }
   return p;
 }
 
@@ -243,10 +256,10 @@ function tier(){
   var tt = s<100?0 : s<200?1 : s<400?2 : s<700?3 : 4;
   return Math.min(4, tt+b);
 }
-function intervalMs(){ return [700,560,440,330,205][tier()]; }
-function spawnGap(){ return [4,4,3,3,2][tier()]; }
+function intervalMs(){ return [400,320,250,190,120][tier()]; }
+function spawnGap(){ return [9,9,7,7,5][tier()]; }
 function maxObjs(){ return tier()>=4 ? 2 : (tier()>=2 ? 2 : 1); }
-function poseHoldTicks(){ return tier()<=1 ? 2 : (tier()<=3 ? 2 : 1); }
+function poseHoldTicks(){ return tier()<=1 ? 4 : (tier()<=3 ? 3 : 2); }
 function feintChance(){ return tier()>=3 ? 0.4 : 0; }
 function birdChance(){ return tier()===0 ? 0 : (tier()===1 ? 0.25 : 0.4); }
 
@@ -316,7 +329,7 @@ function loop(){
     if(poseT>0){ poseT--; if(poseT<=0) heroPose="idle"; }
     if(msgT>0){ msgT--; if(msgT<=0) msg=null; }
     step();
-    if(state==="play"){ sfxTempo(); render(); loop(); }
+    if(state==="play"){ if(tickN%2===0) sfxTempo(); render(); loop(); }
     else render();
   }, intervalMs());
 }
@@ -368,8 +381,8 @@ function step(){
     var ob=objs[i];
     if(ob.dead){ ob.dt++; if(ob.dt<2) keep.push(ob); continue; }
     ob.si++;
-    // feint just before arrival
-    if(ob.feint && !ob.feinted && ob.si===ob.path.length-2){
+    // feint shortly before arrival (leaves ~2 ticks to react)
+    if(ob.feint && !ob.feinted && ob.si===ob.path.length-3){
       var nl = clamp(ob.lane + (Math.random()<0.5?-1:1), 0, 2);
       if(nl===ob.lane) nl = clamp(ob.lane + (ob.lane===0?1:-1),0,2);
       ob.lane=nl;
@@ -404,6 +417,7 @@ function render(){
   while(lcd.firstChild) lcd.removeChild(lcd.firstChild);
   if(state==="win"){ renderWin(); return; }
 
+  drawPaths();
   drawTower();
   drawGround();
   drawScore(score);
@@ -429,6 +443,17 @@ function render(){
   if(msg && state==="play"){ txt(200,262,14,msg,true); }
 }
 
+function drawPaths(){
+  // faint コマ送り grid the materials / obstacles snap along
+  for(var l=0;l<3;l++){
+    var pp=topPath(l);
+    for(var i=0;i<pp.length;i++) disc(pp[i][0], pp[i][1], 2.4, false);
+  }
+  var sp=sidePath("L",2);   // spans the whole width at SIDE_Y
+  for(var k=0;k<sp.length;k++) disc(sp[k][0], sp[k][1], 2.4, false);
+  var sr=sidePath("R",0);
+  for(var m=0;m<sr.length;m++) disc(sr[m][0], sr[m][1], 2.4, false);
+}
 function drawGround(){
   // 3-lane platform the hero stands on
   rectf(40,204,320,7,false,2);
