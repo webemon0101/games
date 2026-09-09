@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-GK5QCXSGJB"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-GK5QCXSGJB');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#2b3b52">
+<title>サイバー・ランナー 198X — CYBER RUNNER 198X</title>
+<meta name="google-adsense-account" content="ca-pub-8860612143084575">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8860612143084575"
+     crossorigin="anonymous"></script>
+<style>
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; }
+  body{
+    background:radial-gradient(circle at 50% 22%, #23303f, #0a0d13 74%);
+    min-height:100dvh; overflow:hidden;
+    font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+    touch-action:manipulation;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  #stage{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+
+  #console{
+    width:376px; transform-origin:center center;
+    padding:14px 14px 18px;
+    border-radius:28px;
+    background:
+      linear-gradient(155deg,#8fa6c4 0%,#4f6482 30%,#33445c 60%,#212c3c 100%);
+    box-shadow:
+      inset 0 3px 5px rgba(200,220,255,.55),
+      inset 0 -7px 16px rgba(0,0,0,.5),
+      0 20px 42px rgba(0,0,0,.55),
+      0 0 0 2px rgba(150,180,220,.2);
+    position:relative;
+  }
+  #console::before{
+    content:""; position:absolute; inset:7px; border-radius:22px;
+    border:1px solid rgba(120,150,190,.3); pointer-events:none;
+  }
+  .screw{ position:absolute; width:9px; height:9px; border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, #e8f0ff, #5f6f86);
+    box-shadow:inset 0 0 2px rgba(0,0,0,.6); }
+  .screw.tl{ top:10px; left:10px; } .screw.tr{ top:10px; right:10px; }
+  .screw.bl{ bottom:12px; left:10px; } .screw.br{ bottom:12px; right:10px; }
+
+  .toprow{ display:flex; gap:5px; justify-content:center; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .mode{
+    font-family:inherit; font-weight:800; font-size:9.5px; letter-spacing:.3px;
+    color:#0c1420; background:linear-gradient(#dfe9fb,#9db3d4);
+    border:1px solid #4a5f80; border-radius:14px; padding:5px 9px; cursor:pointer;
+    box-shadow:0 2px 0 #3c4f6c, 0 3px 4px rgba(0,0,0,.35);
+  }
+  .mode.sm{ padding:5px 8px; }
+  .mode:active{ transform:translateY(2px); box-shadow:0 0 0 #3c4f6c; }
+
+  .screenwrap{
+    padding:11px; border-radius:12px;
+    background:linear-gradient(#141a22,#2a3644);
+    box-shadow:inset 0 4px 10px rgba(0,0,0,.7);
+  }
+  .screen{
+    position:relative; width:100%; aspect-ratio:4/3;
+    border-radius:6px; overflow:hidden;
+    background:radial-gradient(130% 100% at 50% 12%, #a8c0c8, #93aeb6 60%, #849fa8 100%);
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.35), inset 0 0 24px rgba(20,35,45,.45);
+  }
+  .screen::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(120deg,rgba(255,255,255,.22),rgba(255,255,255,0) 44%);
+  }
+  #lcd{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+  #shareWrap{
+    position:absolute; left:50%; bottom:4%; transform:translateX(-50%);
+    display:flex; gap:8px; align-items:center;
+  }
+  #shareWrap[hidden]{ display:none; }
+  #shareBtn{
+    font-family:"Courier New",monospace; font-weight:800; font-size:12px; letter-spacing:1px;
+    color:#0c1420; background:linear-gradient(#8fe3ff,#3bb6e6);
+    border:2px solid #0c1420; border-radius:4px; padding:6px 12px; cursor:pointer;
+    box-shadow:2px 2px 0 rgba(12,20,32,.6);
+  }
+  #shareBtn:active{ transform:translate(1px,1px); box-shadow:1px 1px 0 rgba(12,20,32,.6); }
+
+  .controls{ display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px; padding:0 4px; }
+  .dgrp,.agrp{ display:flex; gap:10px; }
+  .rb{
+    width:66px; height:66px; border-radius:50%;
+    font-family:inherit; font-weight:800; color:#0c1420; cursor:pointer;
+    border:2px solid #3c4f6c;
+    background:radial-gradient(circle at 36% 30%, #eef4ff, #b9c8e2 60%, #8ea1c2 100%);
+    box-shadow:0 5px 0 #364a66, 0 7px 10px rgba(0,0,0,.4), inset 0 2px 5px rgba(255,255,255,.7);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1;
+    touch-action:none;
+  }
+  .rb .big{ font-size:22px; }
+  .rb .lab{ font-size:8px; margin-top:2px; letter-spacing:.5px; }
+  .rb.ab{ background:radial-gradient(circle at 36% 30%, #b9ffe6, #45d9a6 58%, #1fa87a 100%); color:#052018; border-color:#157a58;
+    box-shadow:0 5px 0 #12664a, 0 7px 10px rgba(0,0,0,.4), inset 0 2px 5px rgba(255,255,255,.5); }
+  .rb:active{ transform:translateY(4px); box-shadow:0 1px 0 #364a66, 0 3px 6px rgba(0,0,0,.4), inset 0 2px 5px rgba(255,255,255,.7); }
+
+  .hint{ margin-top:9px; text-align:center; font-size:10px; color:#c4d3e6; line-height:1.5; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="console">
+    <span class="screw tl"></span><span class="screw tr"></span>
+    <span class="screw bl"></span><span class="screw br"></span>
+
+    <div class="toprow">
+      <button class="mode" data-act="a">GAME&nbsp;A</button>
+      <button class="mode" data-act="b">GAME&nbsp;B</button>
+      <button class="mode" data-act="reset">TIME / RESET</button>
+      <button class="mode sm" id="snd">&#9834;&nbsp;ON</button>
+    </div>
+
+    <div class="screenwrap">
+      <div class="screen">
+        <svg id="lcd" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet"></svg>
+        <div id="shareWrap" hidden>
+          <button id="shareBtn">X でスコアをシェア</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="dgrp">
+        <button class="rb" id="bU"><span class="big">&#9650;</span><span class="lab">上レーン</span></button>
+        <button class="rb" id="bD"><span class="big">&#9660;</span><span class="lab">下レーン</span></button>
+      </div>
+      <div class="agrp">
+        <button class="rb ab" id="bA"><span class="big">A</span><span class="lab">ジャンプ</span></button>
+      </div>
+    </div>
+    <div class="hint">&uarr;&darr; レーン変更 ／ A ジャンプ（油膜・バリケードを跳越）<br>トラック・ゲートは反対レーンへ回避 ／ 3クラッシュで終了・1000点でクリア</div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= helpers ================= */
+var NS="http://www.w3.org/2000/svg";
+var lcd=document.getElementById("lcd");
+function $(id){ return document.getElementById(id); }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+
+function E(tag,a){
+  var e=document.createElementNS(NS,tag);
+  for(var k in a) e.setAttribute(k,a[k]);
+  lcd.appendChild(e);
+  return e;
+}
+function col(on){ return on ? "#121A20" : "#3b4c52"; }
+function op(on){ return on ? 0.95 : 0.15; }
+function disc(x,y,r,on){ E("circle",{cx:x,cy:y,r:r,fill:col(on),opacity:op(on)}); }
+function ring(x,y,r,on,w){ E("circle",{cx:x,cy:y,r:r,fill:"none",stroke:col(on),"stroke-width":w||2.4,opacity:op(on)}); }
+function rectf(x,y,w,h,on,rx){ E("rect",{x:x,y:y,width:w,height:h,rx:rx||1.5,fill:col(on),opacity:op(on)}); }
+function lineC(x1,y1,x2,y2,on,w){ E("line",{x1:x1,y1:y1,x2:x2,y2:y2,stroke:col(on),"stroke-width":w||5,"stroke-linecap":"round",opacity:op(on)}); }
+function polyf(pts,on){ E("polygon",{points:pts,fill:col(on),opacity:op(on)}); }
+function pathf(d,on){ E("path",{d:d,fill:col(on),opacity:op(on)}); }
+function paths(d,on,w){ E("path",{d:d,fill:"none",stroke:col(on),"stroke-width":w||3,"stroke-linecap":"round","stroke-linejoin":"round",opacity:op(on)}); }
+function txt(x,y,s,str,on,anchor){ var e=E("text",{x:x,y:y,"font-family":"'Courier New',monospace","font-weight":"bold","font-size":s,fill:col(on),opacity:op(on),"text-anchor":anchor||"middle"}); e.textContent=str; }
+
+/* ================= 7-seg ================= */
+var SEG7={
+ "0":"abcdef","1":"bc","2":"abged","3":"abgcd","4":"fgbc","5":"afgcd",
+ "6":"afgedc","7":"abc","8":"abcdefg","9":"abcdfg",
+ "A":"abcefg","b":"cdefg","-":"g"," ":""
+};
+function digit(x,y,w,h,ch,litGhost){
+  var t=Math.max(2.5,w*0.18), vL=(h-3*t)/2;
+  var on=SEG7[ch]||"";
+  var def={
+    a:[x+t,y,w-2*t,t], f:[x,y+t,t,vL], b:[x+w-t,y+t,t,vL],
+    g:[x+t,y+(h-t)/2,w-2*t,t], e:[x,y+(h+t)/2,t,vL], c:[x+w-t,y+(h+t)/2,t,vL],
+    d:[x+t,y+h-t,w-2*t,t]
+  };
+  for(var s in def){
+    var r=def[s], lit=on.indexOf(s)>=0;
+    if(litGhost || lit) E("rect",{x:r[0],y:r[1],width:r[2],height:r[3],rx:t*0.4,fill:col(lit),opacity:op(lit)});
+  }
+}
+function drawScore(v){
+  var str=(""+Math.min(9999,v)); while(str.length<4) str="0"+str;
+  for(var i=0;i<4;i++) digit(150+i*26, 10, 21, 30, str.charAt(i), true);
+}
+
+/* ================= geometry ================= */
+var LANEY=[116,170];       // upper, lower lane centre y
+var BIKE_X=66;
+var OB_STEPS=9;
+var ROAD_TOP=90, ROAD_MID=143, ROAD_BOT=198;
+function obPath(lane){
+  var y=LANEY[lane], p=[];
+  for(var i=0;i<OB_STEPS;i++){ var f=i/(OB_STEPS-1); p.push([ 378 + (BIKE_X-378)*f, y ]); }
+  return p;
+}
+
+/* ================= audio ================= */
+var actx=null, soundOn=true;
+function ac(){ try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==="suspended") actx.resume(); }catch(e){} return actx; }
+function blip(f,d,type,v,slideTo){
+  if(!soundOn) return; var c=ac(); if(!c) return;
+  try{
+    var o=c.createOscillator(), g=c.createGain(), n=c.currentTime;
+    o.type=type||"square"; o.frequency.setValueAtTime(f,n);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20,slideTo), n+d);
+    g.gain.setValueAtTime(0.0001,n);
+    g.gain.linearRampToValueAtTime(v||0.12,n+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001,n+d);
+    o.connect(g); g.connect(c.destination); o.start(n); o.stop(n+d+0.03);
+  }catch(e){}
+}
+function noise(d,v){
+  if(!soundOn) return; var c=ac(); if(!c) return;
+  try{
+    var len=Math.floor(c.sampleRate*d), b=c.createBuffer(1,len,c.sampleRate), dd=b.getChannelData(0);
+    for(var i=0;i<len;i++) dd[i]=(Math.random()*2-1)*(1-i/len);
+    var s=c.createBufferSource(), g=c.createGain();
+    s.buffer=b; g.gain.value=v||0.3; s.connect(g); g.connect(c.destination); s.start();
+  }catch(e){}
+}
+function sfxTic(){ noise(0.02,0.09); }
+function sfxTempo(){ blip(1180+tier()*175, 0.024, "square", 0.04); }
+function sfxClear(){ blip(1300,0.045,"square",0.12); setTimeout(function(){ blip(1980,0.06,"square",0.11); },24); }
+function sfxJump(){ blip(420,0.26,"square",0.12,1500); }
+function sfxCrash(){ noise(0.3,0.5); blip(88,0.34,"sawtooth",0.22,40); }
+function sfxDown(){ blip(900,0.5,"sawtooth",0.16,80); setTimeout(function(){ noise(0.2,0.16); },160); }
+function sfxRecover(){ [700,1050,1400].forEach(function(f,i){ setTimeout(function(){ blip(f,0.1,"square",0.12); },i*80); }); }
+function sfxFanfare(){ [523,659,784,1047,1319,1047,1319,1568,2093].forEach(function(f,i){ setTimeout(function(){ blip(f,0.14,"square",0.13); },i*95); }); }
+
+/* ================= state ================= */
+var mode="A", state="attract";
+var score=0, miss=0;
+var bikeLane=0, jumpT=0;
+var obs=[], nextId=1, spawnTimer=0, scroll=0;
+var tickN=0, blink=0, timer=null, missFlashT=0, msg=null, msgT=0, recovered200=false, winT=0;
+
+function tier(){
+  var s=score, b=(mode==="B")?1:0;
+  var tt = s<100?0 : s<200?1 : s<400?2 : s<700?3 : 4;
+  return Math.min(4, tt+b);
+}
+function intervalMs(){ return [520,420,320,230,150][tier()]; }
+function spawnGap(){ return [8,7,6,5,4][tier()]; }
+function maxObs(){ return tier()>=3 ? 2 : 1; }
+function jumpDur(){ return [4,4,3,3,3][tier()]; }
+function swapChance(){ return tier()<2 ? 0 : (tier()>=3 ? 0.35 : 0.2); }
+
+function setMsg(s){ msg=s; msgT=6; }
+function titleFor(s){
+  if(s>=1000) return "ハイウェイの神";
+  if(s>=501) return "伝説のサイバーランナー";
+  if(s>=200) return "ネオン街の疾風";
+  return "ビギナーランナー";
+}
+
+/* ================= flow ================= */
+function attract(){
+  clearTimeout(timer);
+  state="attract"; mode="A"; score=0; miss=0; bikeLane=0; jumpT=0;
+  obs=[mkOb(1)]; recovered200=false; winT=0; scroll=0;
+  render();
+  demoLoop();
+}
+function demoLoop(){
+  clearTimeout(timer);
+  timer=setTimeout(function(){
+    if(state!=="attract") return;
+    tickN++; blink^=1; scroll=(scroll+3)%24;
+    var o=obs[0];
+    o.si++;
+    if(o.si>=o.path.length-2){
+      // auto-dodge for the demo
+      if(o.mech==="jm" && Math.random()<0.5) jumpT=jumpDur();
+      else bikeLane = (o.lane===0)?1:0;
+    }
+    if(o.si>=o.path.length-1) obs[0]=mkOb(o.id+1);
+    if(jumpT>0) jumpT--;
+    render();
+    demoLoop();
+  }, 300);
+}
+
+function mkOb(id){
+  var t=tier();
+  var lane=Math.floor(Math.random()*2);
+  var r=Math.random(), kind, mech;
+  if(t===0){ kind="barricade"; mech="jm"; }
+  else if(t===1){
+    if(r<0.4){ kind="truck"; mech="mv"; }
+    else if(r<0.75){ kind="oil"; mech="jm"; }
+    else { kind="barricade"; mech="jm"; }
+  } else {
+    if(r<0.24){ kind="truck"; mech="mv"; }
+    else if(r<0.44){ kind="oil"; mech="jm"; }
+    else if(r<0.64){ kind="gate"; mech="mv"; }
+    else { kind="barricade"; mech="jm"; }
+  }
+  var swap = Math.random()<swapChance();
+  return { id:id, lane:lane, kind:kind, mech:mech, swap:swap, swapped:false, path:obPath(lane), si:0, dead:false, dt:0, result:null };
+}
+
+function newGame(m){
+  ac(); clearTimeout(timer);
+  mode=m; state="ready"; score=0; miss=0; bikeLane=0; jumpT=0;
+  obs=[]; nextId=1; spawnTimer=0; scroll=0; tickN=0; missFlashT=0; recovered200=false; winT=0;
+  msg="READY"; msgT=99;
+  render();
+  var rc=0;
+  var rd=function(){
+    blip(760,0.07,"square",0.1); rc++;
+    if(rc>=3){ msg=null; state="play"; render(); loop(); }
+    else timer=setTimeout(rd,400);
+  };
+  timer=setTimeout(rd,420);
+}
+
+function loop(){
+  clearTimeout(timer);
+  timer=setTimeout(function(){
+    if(state!=="play") return;
+    tickN++; blink^=1;
+    scroll=(scroll + (4+tier()*2)) % 24;
+    if(missFlashT>0) missFlashT--;
+    if(jumpT>0) jumpT--;
+    if(msgT>0){ msgT--; if(msgT<=0) msg=null; }
+    step();
+    if(state==="play"){ if(tickN%2===0) sfxTempo(); render(); loop(); }
+    else render();
+  }, intervalMs());
+}
+
+function doMiss(){
+  miss++; missFlashT=6; sfxCrash();
+  setMsg("クラッシュ！");
+  if(miss>=3) gameOver();
+}
+function checkEvents(){
+  if(!recovered200 && score>=200){
+    recovered200=true;
+    if(miss>0){ miss--; setMsg("リカバリー！"); sfxRecover(); }
+  }
+  if(score>=1000 && state==="play") winGame();
+}
+function resolve(o){
+  var otherLane = (bikeLane !== o.lane);
+  var ok = (o.mech==="jm") ? (otherLane || jumpT>0) : otherLane;
+  if(ok){ score+=10; o.result="ok"; sfxClear(); setMsg("+10  "+score+"km"); }
+  else { o.result="miss"; doMiss(); }
+  o.dead=true; o.dt=0;
+  checkEvents();
+}
+
+function step(){
+  if(spawnTimer>0) spawnTimer--;
+  var live=0;
+  for(var q=0;q<obs.length;q++) if(!obs[q].dead) live++;
+  if(spawnTimer<=0 && live<maxObs()){
+    obs.push(mkOb(nextId++));
+    spawnTimer=spawnGap();
+  }
+  var keep=[];
+  for(var i=0;i<obs.length;i++){
+    var o=obs[i];
+    if(o.dead){ o.dt++; if(o.dt<2) keep.push(o); continue; }
+    o.si++;
+    if(o.swap && !o.swapped && o.si===o.path.length-3){
+      o.lane=(o.lane===0)?1:0;
+      o.path=obPath(o.lane);
+      o.swapped=true;
+      blip(1700,0.05,"square",0.09,950); setMsg("レーン急変！");
+    }
+    if(o.si>=o.path.length-1){ resolve(o); keep.push(o); }
+    else keep.push(o);
+  }
+  obs=keep;
+}
+
+function gameOver(){
+  state="over"; clearTimeout(timer);
+  sfxCrash(); setTimeout(sfxDown,260);
+  msg=null; msgT=0;
+  render();
+}
+function winGame(){
+  state="win"; winT=0; clearTimeout(timer); sfxFanfare();
+  timer=setTimeout(winLoop,120);
+}
+function winLoop(){
+  clearTimeout(timer);
+  timer=setTimeout(function(){ if(state!=="win") return; winT++; blink^=1; scroll=(scroll+6)%24; render(); winLoop(); },140);
+}
+
+/* ================= render ================= */
+function render(){
+  while(lcd.firstChild) lcd.removeChild(lcd.firstChild);
+  if(state==="win"){ renderWin(); return; }
+
+  var neonOn = (state!=="over");
+  drawCity(neonOn);
+  drawRoad(state==="play"||state==="attract");
+  drawScore(score);
+  digit(24,12,13,20, mode==="A"?"A":"b", true);
+  txt(24, 44, 10, score+"km", true, "start");
+  drawCrashMarks();
+
+  for(var i=0;i<obs.length;i++) drawOb(obs[i]);
+  drawBike(BIKE_X, LANEY[bikeLane] - (jumpT>0?22:0), state==="over" ? "crash" : (jumpT>0?"jump":"ride"));
+
+  if(state==="attract"){
+    rectf(48,118,304,56,false,6);
+    txt(200,142,20,"CYBER RUNNER 198X",true);
+    txt(200,162,12,(blink?"GAME A / GAME B おす":""),true);
+  }
+  if(state==="ready") txt(200,150,30,"READY",true);
+  if(state==="over"){
+    rectf(44,176,312,74,false,5);
+    txt(200,197,21,"GAME OVER",true);
+    txt(200,216,12,"称号："+titleFor(score),true);
+    txt(200,231,11,score+" km 走破",true);
+    txt(200,245,9.5,"GAME A / GAME B で リスタート",true);
+  }
+  if(msg && state==="play"){ txt(200,250,13,msg,true); }
+
+  $("shareWrap").hidden = (state!=="over" && state!=="win");
+}
+
+function drawCity(neon){
+  // ghost skyline silhouette (always faint) + flashing neon (off when neon===false)
+  var base=84;
+  for(var i=0;i<13;i++){
+    var x=10+i*30, bh=16+((i*37)%26);
+    rectf(x, base-bh, 24, bh, false);
+    // rooftop light
+    disc(x+12, base-bh-3, 2, neon && ((tickN+i)%2===0));
+    // a couple of windows
+    if(neon){
+      rectf(x+5, base-bh+5, 3, 3, (blink ^ (i&1)));
+      rectf(x+15, base-bh+11, 3, 3, ((tickN>>1) ^ (i&1)));
+    }
+  }
+  // neon sky dots
+  for(var d=0;d<10;d++){
+    var nx=18+(d*39)%364, ny=16+((d*53)%40);
+    disc(nx,ny,1.8, neon && ((blink ^ (d&1))===1));
+  }
+}
+function drawRoad(moving){
+  lineC(20,ROAD_TOP,380,ROAD_TOP,false,2.5);
+  lineC(20,ROAD_BOT,380,ROAD_BOT,false,2.5);
+  // lane divider (dashed, scrolling)
+  for(var x=-scroll; x<390; x+=24){ rectf(x, ROAD_MID-1.5, 12, 3, moving); }
+  if(!moving) return;
+  // roadside speed streaks (more + brighter at higher tier)
+  var n = 3 + tier()*2;
+  for(var i=0;i<n;i++){
+    var sx = ((i*63 - scroll*3) % 400 + 400) % 400;
+    var lit = moving && ((tickN + i) % 2 === 0);
+    rectf(sx, ROAD_TOP-6, 16, 3, lit);
+    rectf((sx+30)%400, ROAD_BOT+3, 16, 3, lit);
+  }
+  // light poles at high tier
+  if(tier()>=3){
+    for(var p=0;p<4;p++){
+      var px = ((p*110 - scroll*4) % 440 - 20 + 440) % 440 - 20;
+      lineC(px, ROAD_TOP-2, px, ROAD_TOP-24, ((tickN+p)%2===0), 2.5);
+      disc(px, ROAD_TOP-24, 3, ((tickN+p)%2===0));
+    }
+  }
+}
+function drawCrashMarks(){
+  for(var i=0;i<3;i++){
+    var x=300+i*22, y=44, used=i<miss;
+    var flash = used && missFlashT>0 && blink;
+    var on = used && !flash;
+    for(var a=0;a<4;a++){ var an=a*Math.PI/4; lineC(x-Math.cos(an)*(on||!used?6:5), y-Math.sin(an)*6, x+Math.cos(an)*6, y+Math.sin(an)*6, used?on:false, used?2.4:1.6); }
+    if(!used) ring(x,y,5,false,1.4);
+  }
+}
+
+function drawOb(o){
+  var s=o.path[Math.min(o.si,o.path.length-1)];
+  var x=s[0], y=s[1], on=true;
+  if(o.dead){
+    if(o.result==="miss"){
+      for(var b=0;b<8;b++){ var bn=b*Math.PI/4; lineC(x+Math.cos(bn)*4,y+Math.sin(bn)*4,x+Math.cos(bn)*14,y+Math.sin(bn)*14,on,2.2); }
+      return;
+    }
+    return;
+  }
+  if(o.kind==="barricade"){
+    rectf(x-11, y+2, 22, 8, on, 1);
+    lineC(x-8,y+9,x-2,y+3,on,1.6); lineC(x+1,y+9,x+7,y+3,on,1.6);
+    lineC(x-11,y+2,x-11,y+11,on,2); lineC(x+11,y+2,x+11,y+11,on,2);
+  } else if(o.kind==="truck"){
+    rectf(x-13, y-16, 26, 24, on, 2);
+    rectf(x+6, y-10, 8, 8, on, 1);        // cab window hint
+    disc(x-6, y+9, 3, on); disc(x+7, y+9, 3, on);
+  } else if(o.kind==="oil"){
+    E("ellipse",{cx:x,cy:y+9,rx:15,ry:4.5,fill:col(on),opacity:op(on)});
+    paths("M"+(x-9)+","+(y+6)+" Q"+x+","+(y+2)+" "+(x+9)+","+(y+6), on, 1.6);
+  } else if(o.kind==="gate"){
+    // closed barrier dropping into this lane
+    rectf(x-3, y-22, 6, 26, on, 1);
+    for(var g=0;g<4;g++) rectf(x-9, y-20+g*7, 18, 3, on, 1);
+    disc(x, y-24, 3, on);
+  }
+  if(o.swap && !o.swapped) txt(x, y-24, 13, "!", on);
+}
+
+function drawBike(x, y, pose){
+  var on=true;
+  if(pose==="crash"){
+    polyf((x-18)+","+(y+8)+" "+(x+20)+","+(y-2)+" "+(x+18)+","+(y+13)+" "+(x-20)+","+(y+15), on);
+    disc(x-3,y-2,5,on);
+    for(var i=0;i<5;i++){ disc(x+8+i*6, y-10-i*8, 3+i, false); }   // smoke
+    return;
+  }
+  // sleek hover body (nose to the right)
+  polyf((x-20)+","+(y+3)+" "+(x+26)+","+(y-4)+" "+(x+30)+","+(y+4)+" "+(x-16)+","+(y+12), on);
+  polyf((x-20)+","+(y+3)+" "+(x-30)+","+(y-9)+" "+(x-15)+","+(y+3), on);      // rear fin
+  // windscreen + rider leaning forward
+  paths("M"+(x-2)+","+(y+4)+" Q"+(x+6)+","+(y-12)+" "+(x+16)+","+(y-3), on, 3);
+  disc(x, y-8, 5, on);                                                        // helmet
+  paths("M"+(x-8)+","+(y+4)+" L"+(x-1)+","+(y-5)+" L"+(x+10)+","+(y-2), on, 5);
+  // underside hover glow (ghost)
+  E("ellipse",{cx:x, cy:y+16, rx:20, ry:4, fill:col(false), opacity:op(false)});
+  lineC(x-10, y+12, x-10, y+18, false, 3);
+  lineC(x+12, y+10, x+12, y+16, false, 3);
+  if(pose==="jump"){
+    lineC(x-10,y+17,x-14,y+30,on,3); lineC(x+10,y+15,x+7,y+28,on,3);
+    lineC(x-2,y+16,x-4,y+30,on,3);
+  }
+}
+
+function drawBuff(x,y,s,on,pose){
+  function P(dx,dy){ return (x+dx*s)+","+(y+dy*s); }
+  paths("M"+P(-6,0)+" L"+P(-7,14), on, 4*s);
+  paths("M"+P(6,0)+" L"+P(7,14), on, 4*s);
+  polyf(P(-10,-14)+" "+P(10,-14)+" "+P(8,2)+" "+P(-8,2), on);
+  disc(x, y-20*s, 4.2*s, on);
+  if(pose==="cheer"){ paths("M"+P(-9,-12)+" L"+P(-15,-26), on, 4*s); paths("M"+P(9,-12)+" L"+P(15,-26), on, 4*s); }
+  else { paths("M"+P(-9,-11)+" L"+P(-17,-11), on, 4*s); paths("M"+P(9,-11)+" L"+P(17,-11), on, 4*s); }
+}
+
+function renderWin(){
+  var full=(winT%2===0);
+  // sunrise: a few horizon bands high up
+  for(var i=0;i<4;i++) lineC(20, 30+i*12, 380, 30+i*12, full, 2.4);
+  disc(300, 40, 14, full);                       // rising sun
+  // broken cyber-wall chunks flying off
+  for(var w=0;w<5;w++){ rectf(150+w*30, 74+((w*11)%16), 20, 14, full); }
+  drawRoad(true);
+  drawScore(1000);
+  digit(24,12,13,20, mode==="A"?"A":"b", true);
+  txt(24,44,10,"1000km",true,"start");
+
+  drawBike(210, LANEY[0], full?"jump":"ride");
+  var xs=[34,80,300,346];
+  for(var k=0;k<xs.length;k++) drawBuff(xs[k], LANEY[1]+22, 0.52, full, (k%2?"cheer":"front"));
+
+  rectf(44,178,312,58,!full,5);
+  txt(200,200,18,"ハイウェイ 完走！",true);
+  txt(200,220,12,"称号："+titleFor(score),true);
+  txt(200,233,9.5, full?"CLEAR  1000km":"",true);
+  $("shareWrap").hidden=false;
+}
+
+/* ================= X share ================= */
+function shareURL(){
+  var t=titleFor(score);
+  var gameUrl="https://webemon0101.github.io/games/cyber-runner/";
+  var text="CYBER RUNNER 198X\nスコア "+score+"km ／ 称号「"+t+"」で走り抜けた！";
+  return "https://twitter.com/intent/tweet"
+    + "?text=" + encodeURIComponent(text)
+    + "&url="  + encodeURIComponent(gameUrl)
+    + "&hashtags=" + encodeURIComponent("サイバーランナー198X,レトロゲーム");
+}
+$("shareBtn").addEventListener("click",function(e){
+  e.stopPropagation();
+  window.open(shareURL(), "_blank", "noopener");
+});
+
+/* ================= input ================= */
+function wire(el,fn){
+  el.addEventListener("touchstart",function(e){ e.preventDefault(); fn(); },{passive:false});
+  el.addEventListener("mousedown",function(e){ e.preventDefault(); fn(); });
+}
+function setLane(l){
+  ac(); sfxTic();
+  if(state==="attract"){ newGame("A"); return; }
+  if(state!=="play") return;
+  bikeLane=l; render();
+}
+function jump(){
+  ac(); sfxTic();
+  if(state==="attract"){ newGame("A"); return; }
+  if(state==="win"||state==="over"){ attract(); return; }
+  if(state!=="play") return;
+  if(jumpT<=0){ jumpT=jumpDur(); sfxJump(); render(); }
+}
+wire($("bU"),function(){ setLane(0); });
+wire($("bD"),function(){ setLane(1); });
+wire($("bA"),jump);
+
+document.querySelectorAll(".mode[data-act]").forEach(function(btn){
+  btn.addEventListener("click",function(){
+    ac();
+    var a=btn.dataset.act;
+    if(a==="a") newGame("A");
+    else if(a==="b") newGame("B");
+    else if(a==="reset") attract();
+  });
+});
+$("snd").addEventListener("click",function(e){ e.stopPropagation(); soundOn=!soundOn; this.innerHTML="&#9834;&nbsp;"+(soundOn?"ON":"OFF"); });
+
+window.addEventListener("keydown",function(e){
+  var k=(e.key||"").toLowerCase();
+  if(e.repeat) return;
+  if(k==="arrowup"||k==="w"){ e.preventDefault(); setLane(0); }
+  else if(k==="arrowdown"||k==="s"){ e.preventDefault(); setLane(1); }
+  else if(k==="z"||k==="a"||k===" "||k==="arrowright"){ e.preventDefault(); jump(); }
+  else if(k==="1"){ newGame("A"); }
+  else if(k==="2"){ newGame("B"); }
+  else if(k==="r"){ attract(); }
+});
+document.addEventListener("gesturestart",function(e){ e.preventDefault(); });
+document.addEventListener("dblclick",function(e){ e.preventDefault(); },{passive:false});
+$("console").addEventListener("contextmenu",function(e){ e.preventDefault(); });
+
+/* ================= fit ================= */
+function fit(){
+  var c=$("console");
+  c.style.transform="scale(1)";
+  var r=c.getBoundingClientRect();
+  var k=Math.min(window.innerWidth/(r.width+16), window.innerHeight/(r.height+16), 1.5);
+  c.style.transform="scale("+k+")";
+}
+window.addEventListener("resize",fit);
+window.addEventListener("orientationchange",function(){ setTimeout(fit,200); });
+
+/* ================= boot ================= */
+attract();
+fit();
+setTimeout(fit,120);
+
+})();
+</script>
+</body>
+</html>
