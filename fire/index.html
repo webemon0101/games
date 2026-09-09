@@ -62,11 +62,28 @@
 
   /* ---- LCD screen ---- */
   .screen {
+    position: relative;
     background: #3b4034;
     padding: 12px;
     border-radius: 12px;
     box-shadow: inset 0 0 0 3px #21241d, inset 0 5px 16px rgba(0,0,0,.65);
   }
+
+  /* ---- X score share (game over) ---- */
+  #shareWrap {
+    position: absolute; left: 50%; top: 66%;
+    transform: translateX(-50%);
+  }
+  #shareWrap[hidden] { display: none; }
+  #shareBtn {
+    font: 800 13px/1 "Courier New", monospace; letter-spacing: 1px;
+    color: #2a1608; cursor: pointer;
+    background: linear-gradient(#ffd27a, #f2952f);
+    border: 2px solid #2a1608; border-radius: 4px;
+    padding: 7px 14px;
+    box-shadow: 2px 2px 0 rgba(20,14,6,.55);
+  }
+  #shareBtn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 rgba(20,14,6,.55); }
   canvas {
     width: 100%; height: auto; display: block;
     border-radius: 6px;
@@ -106,6 +123,9 @@
 
     <div class="screen">
       <canvas id="game" width="640" height="420"></canvas>
+      <div id="shareWrap" hidden>
+        <button id="shareBtn">X でスコアをシェア</button>
+      </div>
     </div>
 
     <div class="controls">
@@ -241,6 +261,30 @@
 
   const lerp = (a, b, t) => a + (b - a) * t;
   const level = () => Math.floor(score / 5);
+
+  // ---------------------------------------------------------------------------
+  //  Rank title + X score share
+  // ---------------------------------------------------------------------------
+  const GAME_URL = "https://webemon0101.github.io/games/fire/";
+  function rankTitle(s) {
+    if (s >= 30) return "伝説の火消し";
+    if (s >= 15) return "ベテラン救助隊長";
+    if (s >= 5)  return "一人前レスキュー隊員";
+    return "見習い消防士";
+  }
+  function shareURL() {
+    const t = rankTitle(score);
+    const text = "FIRE RESCUE\nスコア " + score + "人救助 ／ 称号「" + t + "」";
+    return "https://twitter.com/intent/tweet"
+      + "?text=" + encodeURIComponent(text)
+      + "&url=" + encodeURIComponent(GAME_URL)
+      + "&hashtags=" + encodeURIComponent("ファイアレスキュー,レトロゲーム");
+  }
+  const shareWrap = document.getElementById("shareWrap");
+  document.getElementById("shareBtn").addEventListener("pointerdown", e => {
+    e.preventDefault(); e.stopPropagation();
+    window.open(shareURL(), "_blank", "noopener");
+  });
 
   // Tempo: starts slow, tightens gradually with score. GAME B is faster.
   const beatDur = () => mode === "B"
@@ -581,24 +625,27 @@
           ctx.fillText("A=やさしい / B=高速お手玉  (SPACE=A)", W / 2, 292);
         }
       } else {
-        ctx.font = "bold 38px 'Courier New', monospace";
-        ctx.fillText("GAME OVER", W / 2, 140);
+        ctx.font = "bold 36px 'Courier New', monospace";
+        ctx.fillText("GAME OVER", W / 2, 130);
+        ctx.font = "bold 16px 'Courier New', monospace";
+        ctx.fillText("称号「" + rankTitle(score) + "」", W / 2, 156);
         ctx.font = "bold 18px 'Courier New', monospace";
-        ctx.fillText("GAME " + mode + "   SCORE  " + score, W / 2, 178);
-        ctx.fillText("HI  " + hi, W / 2, 202);
+        ctx.fillText("GAME " + mode + "   SCORE " + score + "   HI " + hi, W / 2, 182);
         if (newRecord && blink) {
-          ctx.font = "bold 16px 'Courier New', monospace";
-          ctx.fillText("★ NEW RECORD ★", W / 2, 226);
+          ctx.font = "bold 15px 'Courier New', monospace";
+          ctx.fillText("★ NEW RECORD ★", W / 2, 202);
         }
-        ctx.font = "bold 18px 'Courier New', monospace";
-        ctx.fillText("◀ GAME A     GAME B ▶", W / 2, 268);
+        ctx.font = "bold 17px 'Courier New', monospace";
+        ctx.fillText("◀ GAME A     GAME B ▶", W / 2, 228);
         if (blink) {
-          ctx.font = "bold 13px 'Courier New', monospace";
-          ctx.fillText("SPACE で同じモードをもう一度", W / 2, 296);
+          ctx.font = "bold 12px 'Courier New', monospace";
+          ctx.fillText("SPACE で同じモードをもう一度", W / 2, 246);
         }
       }
       ctx.textAlign = "left";
     }
+
+    shareWrap.hidden = (state !== "gameover");
   }
 
   // ---------------------------------------------------------------------------
